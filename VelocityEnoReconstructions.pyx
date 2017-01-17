@@ -72,40 +72,40 @@ cdef class VelocityEnoReconstructions:
         
         # the following three loops could be rewritten into one (but hurting readability)
         # udd_x
-        block_size = self.enoOrder*Gr.dims.ng[0]
-        for j in xrange(Gr.dims.n[1]):
-            for k in xrange(Gr.dims.n[2]):
-                block_offset = (k*Gr.dims.n[1] + j)*block_size
-                for i in xrange(Gr.dims.ng[0]):
+        block_size = self.enoOrder*Gr.dims.nlg[0]
+        for j in xrange(Gr.dims.nl[1]):
+            for k in xrange(Gr.dims.nl[2]):
+                block_offset = (k*Gr.dims.nl[1] + j)*block_size
+                for i in xrange(Gr.dims.nlg[0]):
                     ijk = i*istride + (j+gw)*jstride + (k+gw)
                     self.udd_x[ block_offset + i ] = PV.values[u_shift + ijk]
                 for n in xrange(1,self.enoOrder):
-                    for i in xrange(Gr.dims.ng[0] - n):
-                        self.udd_x[ block_offset + n*Gr.dims.ng[0] + i] = self.udd_x[block_offset + (n-1)*Gr.dims.ng[0] + i+1] - self.udd_x[block_offset + (n-1)*Gr.dims.ng[0] + i]
+                    for i in xrange(Gr.dims.nlg[0] - n):
+                        self.udd_x[ block_offset + n*Gr.dims.nlg[0] + i] = self.udd_x[block_offset + (n-1)*Gr.dims.nlg[0] + i+1] - self.udd_x[block_offset + (n-1)*Gr.dims.nlg[0] + i]
         
         # udd_y
-        block_size = self.enoOrder*Gr.dims.ng[1]
-        for i in xrange(Gr.dims.n[0]):
-            for k in xrange(Gr.dims.n[2]):
-                block_offset = (k*Gr.dims.n[0] + i)*block_size
-                for j in xrange(Gr.dims.ng[1]):
+        block_size = self.enoOrder*Gr.dims.nlg[1]
+        for i in xrange(Gr.dims.nl[0]):
+            for k in xrange(Gr.dims.nl[2]):
+                block_offset = (k*Gr.dims.nl[0] + i)*block_size
+                for j in xrange(Gr.dims.nlg[1]):
                     ijk = (i+gw)*istride + j*jstride + (k+gw)
                     self.udd_y[ block_offset + j ] = PV.values[v_shift + ijk]
                 for n in xrange(1,self.enoOrder):
-                    for j in xrange(Gr.dims.ng[1] - n):
-                        self.udd_y[ block_offset + n*Gr.dims.ng[1] + j] = self.udd_y[block_offset + (n-1)*Gr.dims.ng[1] + j+1] - self.udd_y[block_offset + (n-1)*Gr.dims.ng[1] + j]
+                    for j in xrange(Gr.dims.nlg[1] - n):
+                        self.udd_y[ block_offset + n*Gr.dims.nlg[1] + j] = self.udd_y[block_offset + (n-1)*Gr.dims.nlg[1] + j+1] - self.udd_y[block_offset + (n-1)*Gr.dims.nlg[1] + j]
         
         # udd_z
-        block_size = self.enoOrder*Gr.dims.ng[2]
-        for i in xrange(Gr.dims.n[0]):
-            for j in xrange(Gr.dims.n[1]):
-                block_offset = (j*Gr.dims.n[0] + i)*block_size
-                for k in xrange(Gr.dims.ng[2]):
+        block_size = self.enoOrder*Gr.dims.nlg[2]
+        for i in xrange(Gr.dims.nl[0]):
+            for j in xrange(Gr.dims.nl[1]):
+                block_offset = (j*Gr.dims.nl[0] + i)*block_size
+                for k in xrange(Gr.dims.nlg[2]):
                     ijk = (i+gw)*istride + (j+gw)*jstride + k
                     self.udd_z[ block_offset + k ] = PV.values[w_shift + ijk]
                 for n in xrange(1,self.enoOrder):
-                    for k in xrange(Gr.dims.ng[2] - n):
-                        self.udd_z[ block_offset + n*Gr.dims.ng[2] + k] = self.udd_z[block_offset + (n-1)*Gr.dims.ng[2] + k+1] - self.udd_z[block_offset + (n-1)*Gr.dims.ng[2] + k]
+                    for k in xrange(Gr.dims.nlg[2] - n):
+                        self.udd_z[ block_offset + n*Gr.dims.nlg[2] + k] = self.udd_z[block_offset + (n-1)*Gr.dims.nlg[2] + k+1] - self.udd_z[block_offset + (n-1)*Gr.dims.nlg[2] + k]
         return
                        
                        
@@ -145,10 +145,10 @@ cdef class VelocityEnoReconstructions:
         with nogil:
             
             # reconstruction of u
-            block_size = self.enoOrder*Gr.dims.ng[0]
+            block_size = self.enoOrder*Gr.dims.nlg[0]
             for j in range(gw, Gr.dims.nlg[1]-gw):
                 for k in range(gw, Gr.dims.nlg[2]-gw):
-                    block_offset = ((k-gw)*Gr.dims.n[1] + j-gw)*block_size
+                    block_offset = ((k-gw)*Gr.dims.nl[1] + j-gw)*block_size
                     for i in range(gw, Gr.dims.nlg[0]-gw):
                         ijk = i*istride + j*jstride + k
                         left = i
@@ -163,10 +163,10 @@ cdef class VelocityEnoReconstructions:
                         DV.values[ucc_shift + ijk] = dot(c[(lshift+1)*self.order : (lshift+2)*self.order], Velocities.values[ (u_shift + ijk + offsetl*istride : (u_shift + ijk + offsetr*istride)+1 : istride], self.order)
             
             # reconstruction of v
-            block_size = self.enoOrder*Gr.dims.ng[1]
+            block_size = self.enoOrder*Gr.dims.nlg[1]
             for i in range(gw, Gr.dims.nlg[0]-gw):
                 for k in range(gw, Gr.dims.nlg[2]-gw):
-                    block_offset = ((k-gw)*Gr.dims.n[0] + i-gw)*block_size
+                    block_offset = ((k-gw)*Gr.dims.nl[0] + i-gw)*block_size
                     for j in range(gw, Gr.dims.nlg[1]-gw):
                         ijk = i*istride + j*jstride + k
                         left = j
@@ -183,10 +183,10 @@ cdef class VelocityEnoReconstructions:
                         DV.values[vcc_shift + ijk] = dot(c[(lshift+1)*self.order : (lshift+2)*self.order], Velocities.values[(v_shift + ijk + offsetl*jstride) : (v_shift + ijk + offsetr*jstride)+1 : jstride], self.order)
                     
             # reconstruction of w
-            block_size = self.enoOrder*Gr.dims.ng[2]
+            block_size = self.enoOrder*Gr.dims.nlg[2]
             for i in range(gw, Gr.dims.nlg[0]-gw):
                 for j in range(gw, Gr.dims.nlg[1]-gw):
-                    block_offset = ((j-gw)*Gr.dims.n[0] + i-gw)*block_size
+                    block_offset = ((j-gw)*Gr.dims.nl[0] + i-gw)*block_size
                     for k in range(gw, Gr.dims.nlg[2]-gw):
                         ijk = i*istride + j*jstride + k
                         left = k
