@@ -32,6 +32,8 @@ cimport Radiation
 cimport Restart
 cimport Surface
 
+from VelocityEnoReconstructions import VelocityEnoReconstructions
+
 class Simulation3d:
 
     def __init__(self, namelist):
@@ -65,6 +67,8 @@ class Simulation3d:
         self.Damping = Damping.Damping(namelist, self.Pa)
         self.TS = TimeStepping.TimeStepping()
         self.Tr = TracersFactory(namelist)
+        
+        self.VelENO = VelocityEnoReconstructions(namelist, self.Gr, self.DV, self.Pa)
 
         # Add new prognostic variables
         self.PV.add_variable('u', 'm/s', "sym", "velocity", self.Pa)
@@ -165,6 +169,8 @@ class Simulation3d:
                 self.Sur.update(self.Gr, self.Ref,self.PV, self.DV,self.Pa,self.TS)
                 self.SGS.update(self.Gr,self.DV,self.PV, self.Ke, self.Sur,self.Pa)
                 self.Damping.update(self.Gr, self.Ref,self.PV, self.DV, self.Pa)
+                
+                self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
 
                 self.SD.update(self.Gr,self.Ref,self.PV,self.DV)
                 self.MD.update(self.Gr,self.Ref,self.PV,self.DV,self.Ke)
