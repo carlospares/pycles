@@ -48,10 +48,9 @@ cdef class VelocityEnoReconstructions:
         
     cpdef update(self, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
                      DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
+                     
         self.computeUndividedDifferences(Gr, PV)
         self.EnoRecCellCenter(Gr, PV, DV)
-        
-             
         DV.communicate_variable(Gr, Pa, DV.get_nv('ucc'))
         DV.communicate_variable(Gr, Pa, DV.get_nv('vcc'))
         DV.communicate_variable(Gr, Pa, DV.get_nv('wcc'))
@@ -82,17 +81,19 @@ cdef class VelocityEnoReconstructions:
         
         # blocks correspond to 1D slices (of nDg elements) of the grid in the direction of D.
         # they are indexed by increasing values of E then F. I.e., for the 1D slice corresponding
-        # to E = e, F = f, the index to be accessed is (f*nE + e)*blockSize
+        # to indices E = e, F = f, the index to be accessed is (f*nE + e)*blockSize
         
         # structure of each block:
         # first, a row of nDg elements, corresponding to one entire 1D slice of the grid across D (incl. ghost points)
-        # then, a row of nDg elements with the first order undivided differences (last element is zero)
+        # These are the 0th-order undivided differences.
+        # Then, a row of nDg elements with the first order undivided differences (last element is zero)
         # followed by rows of nDg elements with the corresponding higher order undiv diffs up to same order of ENO rec
+        # (where the last (level) elements are zero)
         
         # So, to access the n-th order undivided difference in the direction of D, for indices (i,j,k), one would access
-        # D=x:   udd_x[ (k*ny + j)*(nxg*enoOrder) + (n-1)*nxg + (i+gw)]
-        # D=y:   udd_y[ (k*nx + i)*(nyg*enoOrder) + (n-1)*nyg + (j+gw)]
-        # D=z:   udd_z[ (j*nx + i)*(nzg*enoOrder) + (n-1)*nzg + (k+gw)]
+        # D=x:   udd_x[ (k*ny + j)*(nxg*enoOrder) + n*nxg + (i+gw)]
+        # D=y:   udd_y[ (k*nx + i)*(nyg*enoOrder) + n*nyg + (j+gw)]
+        # D=z:   udd_z[ (j*nx + i)*(nzg*enoOrder) + n*nzg + (k+gw)]
         
         
         # udd_x
@@ -210,6 +211,23 @@ cdef class VelocityEnoReconstructions:
                         offsetl = left - j
                         offsetr = right - j
                         DV.values[vcc_shift + ijk] = dot(c[(lshift+1)*order : (lshift+2)*order], Velocities.values[(v_shift + ijk + offsetl*jstride) : (v_shift + ijk + offsetr*jstride)+1 : jstride], order)
+                        # with gil:
+                            # v1 = Velocities.values[(v_shift + ijk + offsetl*jstride)]
+                            # v2 = Velocities.values[(v_shift + ijk + (offsetl+1)*jstride)]
+                            # v3 = Velocities.values[(v_shift + ijk + (offsetl+2)*jstride)]
+                            # reljump1 = fabs(v1-v2)/(fabs(v1)+1e-20)
+                            # reljump2 = fabs(v2-v3)/(fabs(v2)+1e-20)
+                            # jumprec = fabs(DV.values[vcc_shift + ijk] - v2)/(fabs(v2) + 1e-20)
+                            
+                            # if reljump1 < 0.01 and reljump2 < 0.01 and jumprec > 0.05:
+                            
+                            # z = [x for x in Velocities.values[(v_shift + ijk + offsetl*jstride) : (v_shift + ijk + offsetr*jstride)+1 : jstride]]
+                            # if DV.values[vcc_shift + ijk] >= max(z) or DV.values[vcc_shift + ijk] <= min(z):
+                            # if fabs(Velocities.values[(v_shift + ijk + offsetl*jstride)] - Velocities.values[(v_shift + ijk + offsetr*jstride)])/(fabs(Velocities.values[(v_shift + ijk + offsetl*jstride)] + 1e-30)) < 1e-2:
+                            # print Velocities.values[v_shift + ijk], lshift
+                            # print [x for x in Velocities.values[(v_shift + ijk + offsetl*jstride) : (v_shift + ijk + offsetr*jstride)+1 : jstride]]
+                            # print DV.values[vcc_shift + ijk]
+                            # print '--'
                     
             # reconstruction of w
             block_size = order*nlgz
@@ -229,58 +247,5 @@ cdef class VelocityEnoReconstructions:
                         offsetr = right - k
                         DV.values[wcc_shift + ijk] = dot(c[(lshift+1)*order : (lshift+2)*order], Velocities.values[(w_shift + ijk + offsetl*kstride) : (w_shift + ijk + offsetr*kstride)+1 : kstride], order)
              
-             
-#            # Boundary conditions
-#            for vi in range(Velocities.nvars):
-#                var_shift = vi * ng
-##                for i in range(gw, nx + gw):
-##                    jpts = i * nyg
-##                    for j in range(gw):
-##                        src = ny + j
-##                        dst = j
-##                        self.rec_ctr[var_shift + jpts + dst ] = self.rec_ctr[var_shift + jpts + src] #copy right into left
-##                        
-##                        src = gw + j
-##                        dst = gw + ny + j
-##                        self.rec_ctr[var_shift + jpts + dst ] = self.rec_ctr[var_shift + jpts + src] #copy left into right
-##                ######################################
-##                # reflecting bcs in vertical domain
-##                #####################################
-#                if vi == uindex: # u: just reflect on the boundary
-#                    for i in range(gw, nx+gw):
-#                        jpts = i * nyg
-#                        for j in range(gw):
-#                            src = 2*gw - 1 - j
-#                            dst = j
-#                            self.rec_ctr[var_shift + jpts + dst] = self.rec_ctr[var_shift + jpts + src] #copy right into left (in the sense of the array, not physical)
-#                            
-#                            src = gw + ny - 1 - j
-#                            dst = gw + ny + j
-#                            self.rec_ctr[var_shift + jpts + dst] = self.rec_ctr[var_shift + jpts + src] #copy left into right (")
-#                else: # w: reflect with change of sign
-#                    for i in range(0, nxg):
-#                        jpts = i * nyg
-#                        for j in range(gw):
-#                            src = 2*gw - 1 - j
-#                            dst = j
-#                            self.rec_ctr[var_shift + jpts + dst ] = -self.rec_ctr[var_shift + jpts + src] #copy right into left (in the sense of the array, not physical)
-#                        for j in range(gw-1):
-#                            src = gw + ny - 1 - j
-#                            dst = gw + ny + j
-#                            self.rec_ctr[var_shift + jpts + dst ] = -self.rec_ctr[var_shift + jpts + src] #copy left into right (")
-#    
-#                for i in range(gw):
-#                    src = nx + i
-#                    dst = i
-#                    for j in range(nyg):
-#                        self.rec_ctr[var_shift + dst*nyg + j ] = self.rec_ctr[var_shift + src*nyg + j]
-#                    
-#                    src = gw + i
-#                    dst = gw + nx + i
-#                    for j in range(nyg):
-#                        self.rec_ctr[var_shift + dst*nyg + j ] = self.rec_ctr[var_shift + src*nyg + j]
-                        
-                        
-#        
         
 
