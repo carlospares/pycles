@@ -37,7 +37,8 @@ cdef class VelocityEnoReconstructions:
         DV.add_variables('vcc','m/s','sym',Pa)
         DV.add_variables('wcc','m/s','asym',Pa)
         
-        self.enoOrder = 3;
+        # Important! This will not work if gw < order-2
+        self.enoOrder = namelist['scalar_transport']['order'] % 100
             
         self.udd_x = np.zeros(Gr.dims.nlg[0]*self.enoOrder*Gr.dims.nl[1]*Gr.dims.nl[2], dtype=np.double, order='c')
         self.udd_y = np.zeros(Gr.dims.nl[0]*self.enoOrder*Gr.dims.nlg[1]*Gr.dims.nl[2], dtype=np.double, order='c')

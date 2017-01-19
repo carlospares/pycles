@@ -164,13 +164,17 @@ class Simulation3d:
                 self.Th.update(self.Gr,self.Ref,PV_,DV_)
                 self.Micro.update(self.Gr, self.Ref, PV_, DV_, self.TS, self.Pa )
                 self.Tr.update(self.Gr, self.Ref, PV_, DV_, self.Pa)
+                
+                
+                self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
+                
+                
                 self.SA.update(self.Gr,self.Ref,PV_, DV_,  self.Pa)
                 self.MA.update(self.Gr,self.Ref,PV_,self.Pa)
                 self.Sur.update(self.Gr, self.Ref,self.PV, self.DV,self.Pa,self.TS)
                 self.SGS.update(self.Gr,self.DV,self.PV, self.Ke, self.Sur,self.Pa)
                 self.Damping.update(self.Gr, self.Ref,self.PV, self.DV, self.Pa)
                 
-                self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
 
                 self.SD.update(self.Gr,self.Ref,self.PV,self.DV)
                 self.MD.update(self.Gr,self.Ref,self.PV,self.DV,self.Ke)

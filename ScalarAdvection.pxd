@@ -13,6 +13,7 @@ cdef class ScalarAdvection:
         double [:] flux
         Py_ssize_t order
         Py_ssize_t order_sedimentation
+        unicode sa_type
         double (*L_fp)(double T, double Lambda) nogil
         double (*Lambda_fp)(double T) nogil
 
