@@ -55,7 +55,7 @@ void scalar_flux_divergence_nonconserv(struct DimStruct *dims, double *alpha0, d
             const ssize_t jshift = j * jstride;
             for(ssize_t k=kmin; k<kmax; k++){
                 const ssize_t ijk = ishift + jshift + k;
-                tendency[ijk] -= alpha0_half[k] * velocity[ijk] * (flux[ijk] - flux[ijk + sm1])*dxi;
+                tendency[ijk] -= velocity[ijk] * (flux[ijk] - flux[ijk + sm1])*dxi;
             } // End k loop
         } // End j loop
     } // End i loop

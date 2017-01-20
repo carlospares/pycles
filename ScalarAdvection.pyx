@@ -33,6 +33,10 @@ cdef extern from "scalar_advection.h":
     void compute_qt_sedimentation_s_source(Grid.DimStruct *dims, double *p0_half, double* rho0_half, double *flux,
                                     double* qt, double* qv, double* T, double* tendency, double (*lam_fp)(double),
                                     double (*L_fp)(double, double), double dx, Py_ssize_t d)nogil
+                                    
+cdef extern from "positivity_preservation.h":
+    void positivity_preservation_xu(Grid.DimStruct *dims, double *u, double *v, double *w, double *ucc, double *vcc, double *wcc,
+                                    double *scalar, double *flux, double *tendencies, double dt) nogil
 
 
 cdef class ScalarAdvection:
@@ -57,8 +61,11 @@ cdef class ScalarAdvection:
             self.sa_type = namelist['scalar_transport']['type']
         except:
             self.sa_type = u'original'
-
-
+            
+        try:
+            self.positivity = namelist['scalar_transport']['positivity']
+        except:
+            self.positivity = False
         return
 
     cpdef initialize(self,Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa):
@@ -81,66 +88,85 @@ cdef class ScalarAdvection:
             Py_ssize_t t_shift = DV.get_varshift(Gr,'temperature')
             Py_ssize_t ql_shift, qv_shift, qt_shift
         
-        for i in xrange(PV.nv): #Loop over the prognostic variables
-            if PV.var_type[i] == 1: #Only compute advection if variable i is a scalar
-                scalar_shift = i * Gr.dims.npg
-                #No rescaling of fluxes
-                for d in xrange(Gr.dims.dims): #Loop over the cardinal direction
-                    #The flux has a different shift since it is only for the scalars
-                    flux_shift = scalar_count * (Gr.dims.dims * Gr.dims.npg) + d * Gr.dims.npg
-
-                    #Make sure that we get the velocity components in the correct order
-                    #Check for a scalar-specific velocity
-                    sc_vel_name = PV.velocity_names_directional[d] + '_' + PV.index_name[i]
-                    if sc_vel_name in DV.name_index:
-                        vel_shift = DV.get_varshift(Gr, sc_vel_name)
-                        if sc_vel_name == 'w_qt':
-                            ql_shift = DV.get_varshift(Gr,'ql')
-                            qt_shift = PV.get_varshift(Gr,'qt')
-                            qv_shift =  DV.get_varshift(Gr,'qv')
-
-                            compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
-                                                   &DV.values[ql_shift],&self.flux[flux_shift],d,self.order_sedimentation)
-                            scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
-                                               &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
-
-                            compute_qt_sedimentation_s_source(&Gr.dims, &Rs.p0_half[0],  &Rs.rho0_half[0], &self.flux[flux_shift],
-                                                              &PV.values[qt_shift], &DV.values[qv_shift], &DV.values[t_shift],
-                                                              &PV.tendencies[s_shift], self.Lambda_fp,self.L_fp, Gr.dims.dx[d],d)
-                        else:
-
-                            # print(sc_vel_name, ' detected as sedimentation velocity')
-                            #First get the tendency associated with the sedimentation velocity
-                            compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
-                                                   &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order_sedimentation)
-                            scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
-                                               &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
-
-                    # now the advective flux for all scalars
+        
+        if self.positivity:
+            for i in xrange(PV.nv): #Loop over the prognostic variables
+                if PV.var_type[i] == 1: #Only compute advection if variable i is a scalar
+                    scalar_shift = i * Gr.dims.npg
                     
-                    if self.sa_type == "hiweno_conserv" and self.order % 2 == 1:
-                        vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
-                        compute_advective_fluxes_hiweno(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
-                                               &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                        scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
-                                               &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
-                                               
-                    elif self.sa_type == "hiweno_nonconserv" and self.order % 2 == 1:
+                    for d in xrange(Gr.dims.dims):
+                        flux_shift = scalar_count * (Gr.dims.dims * Gr.dims.npg) + d * Gr.dims.npg
                         vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
                         compute_advective_fluxes_hiweno_nonconserv(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
-                                               &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                        scalar_flux_divergence_nonconserv(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&DV.values[vel_shift],
-                                                &self.flux[flux_shift], &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
-                    
-                    else:
-                        vel_shift = PV.velocity_directions[d]*Gr.dims.npg
-                        compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&PV.values[vel_shift],
-                                               &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                        scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
-                                               &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+                                                            &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
+                                                            
+                    positivity_preservation_xu(&Gr.dims,&PV.values[PV.get_varshift(Gr, 'u')], &PV.values[PV.get_varshift(Gr, 'v')],
+                                                &PV.values[PV.get_varshift(Gr, 'w')], &DV.values[DV.get_varshift(Gr, 'ucc')],
+                                                &DV.values[DV.get_varshift(Gr, 'vcc')], &DV.values[DV.get_varshift(Gr, 'wcc')],
+                                                &PV.values[scalar_shift], &self.flux[scalar_count * (Gr.dims.dims * Gr.dims.npg)],
+                                                &PV.tendencies[scalar_shift], self.dt)
+                    scalar_count += 1
+        else:
+            for i in xrange(PV.nv): #Loop over the prognostic variables
+                if PV.var_type[i] == 1: #Only compute advection if variable i is a scalar
+                    scalar_shift = i * Gr.dims.npg
+                    #No rescaling of fluxes
+                    for d in xrange(Gr.dims.dims): #Loop over the cardinal direction
+                        #The flux has a different shift since it is only for the scalars
+                        flux_shift = scalar_count * (Gr.dims.dims * Gr.dims.npg) + d * Gr.dims.npg
+
+                        #Make sure that we get the velocity components in the correct order
+                        #Check for a scalar-specific velocity
+                        sc_vel_name = PV.velocity_names_directional[d] + '_' + PV.index_name[i]
+                        if sc_vel_name in DV.name_index:
+                            vel_shift = DV.get_varshift(Gr, sc_vel_name)
+                            if sc_vel_name == 'w_qt':
+                                ql_shift = DV.get_varshift(Gr,'ql')
+                                qt_shift = PV.get_varshift(Gr,'qt')
+                                qv_shift =  DV.get_varshift(Gr,'qv')
+
+                                compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
+                                                       &DV.values[ql_shift],&self.flux[flux_shift],d,self.order_sedimentation)
+                                scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
+                                                   &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+
+                                compute_qt_sedimentation_s_source(&Gr.dims, &Rs.p0_half[0],  &Rs.rho0_half[0], &self.flux[flux_shift],
+                                                                  &PV.values[qt_shift], &DV.values[qv_shift], &DV.values[t_shift],
+                                                                  &PV.tendencies[s_shift], self.Lambda_fp,self.L_fp, Gr.dims.dx[d],d)
+                            else:
+
+                                # print(sc_vel_name, ' detected as sedimentation velocity')
+                                #First get the tendency associated with the sedimentation velocity
+                                compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
+                                                       &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order_sedimentation)
+                                scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
+                                                   &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+
+                        # now the advective flux for all scalars
+                        
+                        if self.sa_type == "hiweno_conserv" and self.order % 2 == 1:
+                            vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
+                            compute_advective_fluxes_hiweno(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
+                                                   &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
+                            scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
+                                                   &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+                                                   
+                        elif self.sa_type == "hiweno_nonconserv" and self.order % 2 == 1:
+                            vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
+                            compute_advective_fluxes_hiweno_nonconserv(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
+                                                   &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
+                            scalar_flux_divergence_nonconserv(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&DV.values[vel_shift],
+                                                    &self.flux[flux_shift], &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+                        
+                        else:
+                            vel_shift = PV.velocity_directions[d]*Gr.dims.npg
+                            compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&PV.values[vel_shift],
+                                                   &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
+                            scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
+                                                   &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
 
 
-                scalar_count += 1
+                    scalar_count += 1
 
         return
 
