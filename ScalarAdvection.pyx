@@ -80,7 +80,8 @@ cdef class ScalarAdvection:
 
         return
 
-    cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs,PrognosticVariables.PrognosticVariables PV, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
+    cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs,PrognosticVariables.PrognosticVariables PV, 
+                 DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa, double dt):
 
         cdef:
             Py_ssize_t d, i, vel_shift,scalar_shift, scalar_count = 0, flux_shift
@@ -104,7 +105,7 @@ cdef class ScalarAdvection:
                                                 &PV.values[PV.get_varshift(Gr, 'w')], &DV.values[DV.get_varshift(Gr, 'ucc')],
                                                 &DV.values[DV.get_varshift(Gr, 'vcc')], &DV.values[DV.get_varshift(Gr, 'wcc')],
                                                 &PV.values[scalar_shift], &self.flux[scalar_count * (Gr.dims.dims * Gr.dims.npg)],
-                                                &PV.tendencies[scalar_shift], self.dt)
+                                                &PV.tendencies[scalar_shift], dt)
                     scalar_count += 1
         else:
             for i in xrange(PV.nv): #Loop over the prognostic variables
