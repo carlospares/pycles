@@ -3,7 +3,6 @@
 #include "advection_interpolation.h"
 #include "thermodynamic_functions.h"
 #include "entropies.h"
-#include <stdio.h>
 
 void second_order_a(const struct DimStruct *dims, double* restrict rho0, double* restrict rho0_half,const double* restrict velocity, const double* restrict scalar, double* restrict flux, int d){
 
@@ -336,7 +335,6 @@ void weno_fifth_order_a(const struct DimStruct *dims, double* restrict rho0, dou
     const ssize_t sp3 = 3 * sp1;
     const ssize_t sm1 = -sp1 ;
     const ssize_t sm2 = -2*sp1;
-    printf("5 old");
     if(d==2){
         for(ssize_t i=imin;i<imax;i++){
             const ssize_t ishift = i*istride ;
@@ -778,7 +776,6 @@ void hiweno_fifth_order(const struct DimStruct *dims, double* restrict rho0, dou
     const ssize_t sm2 = -2*sp1;
 
     double a;
-    printf("5 cons");
     if(d==2){
         for(ssize_t i=imin;i<imax;i++){
             const ssize_t ishift = i*istride ;
@@ -1202,7 +1199,6 @@ void hiweno_fifth_order_nonconserv(const struct DimStruct *dims, double* restric
     const ssize_t sm1 = -sp1 ;
     const ssize_t sm2 = -2*sp1;
     
-    printf("5 non cons");
     for(ssize_t i=imin;i<imax;i++){
         const ssize_t ishift = i*istride ;
         for(ssize_t j=jmin;j<jmax;j++){
@@ -1513,7 +1509,6 @@ void compute_advective_fluxes_hiweno_nonconserv(struct DimStruct *dims, double* 
 void compute_advective_fluxes_wrapper(struct DimStruct *dims, double* restrict rho0, double* rho0_half ,double* restrict velocity_intercell, 
                                 double* restrict velocity_cellctr, double* restrict scalar,
                                 double* restrict flux, int d, int scheme){
-    printf("%d\n", scheme);
     switch(scheme){
         // original PyCLES' schemes
         case 1:

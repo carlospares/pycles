@@ -167,6 +167,7 @@ class Simulation3d:
                 
                 
                 self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
+                self.VelENO.enoCrossReconstructions(self.Gr, self.DV, self.Pa)
                 
                 
                 self.SA.update(self.Gr,self.Ref,PV_, DV_, self.Pa, self.TS.dt)
