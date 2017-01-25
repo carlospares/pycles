@@ -38,12 +38,12 @@ cdef class VelocityEnoReconstructions:
         DV.add_variables('wcc','m/s','asym',Pa)
         
         ### cross reconstructions
-        DV.add_variables('uXv','m/s','sym',Pa)
-        DV.add_variables('uXw','m/s','sym',Pa)
-        DV.add_variables('vXu','m/s','sym',Pa)
-        DV.add_variables('vXw','m/s','sym',Pa)
-        DV.add_variables('wXu','m/s','asym',Pa)
-        DV.add_variables('wXv','m/s','asym',Pa)
+        DV.add_variables('u@v','m/s','sym',Pa)
+        DV.add_variables('u@w','m/s','sym',Pa)
+        DV.add_variables('v@u','m/s','sym',Pa)
+        DV.add_variables('v@w','m/s','sym',Pa)
+        DV.add_variables('w@u','m/s','asym',Pa)
+        DV.add_variables('w@v','m/s','asym',Pa)
         
         # Important! This will not work if gw < order-2
         self.enoOrder = namelist['scalar_transport']['order']
@@ -78,29 +78,29 @@ cdef class VelocityEnoReconstructions:
         return
         
     cpdef enoCrossReconstructions(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
-        ### interpolate u at v's location
+        ### interpolate u at v's location: u@v
         self.computeUndividedDifferenceVdir(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 1)
-        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 1, DV.get_varshift(Gr, 'uXv'), -1)
+        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 1, DV.get_varshift(Gr, 'u@v'), -1)
         
-        ### interpolate u at w's location
+        ### interpolate u at w's location: u@w
         self.computeUndividedDifferenceVdir(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 2)
-        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 2, DV.get_varshift(Gr, 'uXw'), -1)
+        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 2, DV.get_varshift(Gr, 'u@w'), -1)
         
-        ### interpolate v at u's location
+        ### interpolate v at u's location: v@u
         self.computeUndividedDifferenceVdir(Gr, DV.values, DV.get_varshift(Gr, 'vcc'), 0)
-        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 0, DV.get_varshift(Gr, 'vXu'), -1)
+        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 0, DV.get_varshift(Gr, 'v@u'), -1)
         
-        ### interpolate v at w's location
+        ### interpolate v at w's location: v@w
         self.computeUndividedDifferenceVdir(Gr, DV.values, DV.get_varshift(Gr, 'vcc'), 2)
-        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 2, DV.get_varshift(Gr, 'vXw'), -1)
+        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 2, DV.get_varshift(Gr, 'v@w'), -1)
         
-        ### interpolate w at u's location
+        ### interpolate w at u's location: w@u
         self.computeUndividedDifferenceVdir(Gr, DV.values, DV.get_varshift(Gr, 'wcc'), 0)
-        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 0, DV.get_varshift(Gr, 'wXu'), -1)
+        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 0, DV.get_varshift(Gr, 'w@u'), -1)
         
-        ### interpolate u at w's location
+        ### interpolate u at w's location: w@v
         self.computeUndividedDifferenceVdir(Gr, DV.values, DV.get_varshift(Gr, 'wcc'), 1)
-        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'wXv'), -1)
+        self.EnoRecCellCenterVdir(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'w@v'), -1)
         
         
         

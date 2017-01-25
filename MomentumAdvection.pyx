@@ -6,17 +6,18 @@
 
 cimport Grid
 cimport PrognosticVariables
+cimport DiagnosticVariables
 cimport ParallelMPI
 cimport ReferenceState
 from NetCDFIO cimport NetCDFIO_Stats
 
 
 import numpy as np
-cimport numpy as np
+cimport numpy as np  
 
 cdef extern from "momentum_advection.h":
     void compute_advective_tendencies_m(Grid.DimStruct *dims, double *rho0, double *rho0_half,
-                                    double *alpha0, double *alpha0_half, double *vel_advected,
+                                    double *alpha0, double *alpha0_half, double *vel_advected, double *vel_advecting_rec,
                                     double *vel_advecting, double *tendency, Py_ssize_t d_advected,
                                     Py_ssize_t d_advecting, Py_ssize_t scheme) nogil
 cdef class MomentumAdvection:
@@ -28,6 +29,12 @@ cdef class MomentumAdvection:
                 'momentum_transport order not given in namelist')
             Pa.root_print('Killing simulation now!')
             Pa.kill()
+            
+        try:
+            if namelist['momentum_transport']['type'] == "hiweno":
+                self.scheme = self.order + 100
+        except:
+            self.scheme = self.order
 
         return
 
@@ -38,7 +45,8 @@ cdef class MomentumAdvection:
 
         return
 
-    cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs, PrognosticVariables.PrognosticVariables PV, ParallelMPI.ParallelMPI Pa):
+    cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs, PrognosticVariables.PrognosticVariables PV, 
+                     DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
 
         cdef:
             Py_ssize_t i_advecting  # Direction of advecting velocity
@@ -49,6 +57,8 @@ cdef class MomentumAdvection:
             # Shift to beginning of advecting velocity componentin the
             # PV.values array
             Py_ssize_t shift_advecting
+            Py_ssize_t shift_advecting_rec = 0
+            str cross_name
 
 
         for i_advected in xrange(Gr.dims.dims):
@@ -59,13 +69,18 @@ cdef class MomentumAdvection:
 
                 # Compute the shift to the starting location of the advecting
                 # velocity in the PV values array
-                shift_advecting = PV.velocity_directions[
-                    i_advecting] * Gr.dims.npg
-
+                shift_advecting = PV.velocity_directions[i_advecting] * Gr.dims.npg
+                
+                if i_advecting != i_advected:
+                    cross_name = PV.velocity_names_directional[i_advecting] + "@" + PV.velocity_names_directional[i_advected]
+                    shift_advecting_rec = DV.get_varshift(Gr, cross_name)
+                
+                    
                 # Compute the fluxes
                 compute_advective_tendencies_m(&Gr.dims, &Rs.rho0[0], &Rs.rho0_half[0], &Rs.alpha0[0], &Rs.alpha0_half[0],
                                             &PV.values[shift_advected], &PV.values[shift_advecting],
-                                           &PV.tendencies[shift_advected], i_advected, i_advecting, self.order)
+                                            &DV.values[shift_advecting_rec],
+                                            &PV.tendencies[shift_advected], i_advected, i_advecting, self.scheme)
         return
 
 
