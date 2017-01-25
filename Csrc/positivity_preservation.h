@@ -2,7 +2,7 @@
 #include "grid.h"
 #include <math.h>
 
-void positivity_preservation_xu(struct DimStruct *dims, double *u, double *v, double *w, double *ucc, 
+void positivity_preservation_xu(struct DimStruct *dims, double *ucc, 
                             double *vcc, double *wcc, double *scalars, double *flux, double *tendency, double dt){
 
     const ssize_t imin = dims->gw - 1;
@@ -20,13 +20,10 @@ void positivity_preservation_xu(struct DimStruct *dims, double *u, double *v, do
     const double dzi = dims->dxi[2];
 
     const ssize_t ip1 = istride;
-    const ssize_t ip2 = 2*ip1;
     const ssize_t im1 = -ip1;
     const ssize_t jp1 = jstride;
-    const ssize_t jp2 = 2*jp1;
     const ssize_t jm1 = -jp1;
     const ssize_t kp1 = 1;
-    const ssize_t kp2 = 2*kp1;
     const ssize_t km1 = -kp1;
     
     double Hkp, Hkm, Hjp, Hjm, Hip, Him;
@@ -35,6 +32,8 @@ void positivity_preservation_xu(struct DimStruct *dims, double *u, double *v, do
     double fp, fm, Gamma, denom, theta;
     double thetakp, thetakm, thetajp, thetajm, thetaip, thetaim;
     double Gkp, Gkm, Gjp, Gjm, Gip, Gim;
+    
+    double uip, ui, vjp, vj, wkp, wk;
     
     double lambda_x = dt*dxi;
     double lambda_y = dt*dyi;
@@ -53,12 +52,19 @@ void positivity_preservation_xu(struct DimStruct *dims, double *u, double *v, do
                 const ssize_t ijk = ishift + jshift + k;
                 
                 // upwind first order monotone fluxes for f(phi) = {u/v/w}_ctr * phi (u_ctr assumed constant for each cell)
-                hip = ucc[ijk]* ((u[ijk + ip1] >= 0)*scalars[ijk] + (u[ijk + ip1] < 0)*scalars[ijk + ip1]);
-                hjp = vcc[ijk]* ((v[ijk + jp1] >= 0)*scalars[ijk] + (v[ijk + jp1] < 0)*scalars[ijk + jp1]);
-                hkp = wcc[ijk]* ((w[ijk + kp1] >= 0)*scalars[ijk] + (w[ijk + kp1] < 0)*scalars[ijk + kp1]);
-                him = ucc[ijk]* ((u[ijk] >= 0)*scalars[ijk + im1] + (u[ijk] < 0)*scalars[ijk]);
-                hjm = vcc[ijk]* ((v[ijk] >= 0)*scalars[ijk + jm1] + (v[ijk] < 0)*scalars[ijk]);
-                hkm = wcc[ijk]* ((w[ijk] >= 0)*scalars[ijk + km1] + (w[ijk] < 0)*scalars[ijk]);
+                uip = ucc[ijk] + ucc[ijk + ip1];
+                ui = ucc[ijk + im1] + ucc[ijk];
+                vjp = vcc[ijk] + vcc[ijk + jp1];
+                vj = vcc[ijk + jm1] + vcc[ijk];
+                wkp = wcc[ijk] + wcc[ijk + ip1];
+                wk = wcc[ijk + km1] + wcc[ijk];
+                
+                hip = ucc[ijk]* ((uip >= 0)*scalars[ijk] + (uip < 0)*scalars[ijk + ip1]);
+                hjp = vcc[ijk]* ((vjp >= 0)*scalars[ijk] + (vjp < 0)*scalars[ijk + jp1]);
+                hkp = wcc[ijk]* ((wkp >= 0)*scalars[ijk] + (wkp < 0)*scalars[ijk + kp1]);
+                him = ucc[ijk]* ((ui >= 0)*scalars[ijk + im1] + (ui < 0)*scalars[ijk]);
+                hjm = vcc[ijk]* ((vj >= 0)*scalars[ijk + jm1] + (vj < 0)*scalars[ijk]);
+                hkm = wcc[ijk]* ((wk >= 0)*scalars[ijk + km1] + (wk < 0)*scalars[ijk]);
                 
                 // high order fluxes for f(phi) = {u/v/w}_ctr * phi
                 Hip = ucc[ijk]* flux[x_shift + ijk];

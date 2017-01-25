@@ -1,6 +1,7 @@
 #pragma once
 #include "grid.h"
 
+
 void scalar_flux_divergence(struct DimStruct *dims, double *alpha0, double *alpha0_half, double *flux, double *tendency,
     double dx, ssize_t d){
 
@@ -59,6 +60,15 @@ void scalar_flux_divergence_nonconserv(struct DimStruct *dims, double *alpha0, d
             } // End k loop
         } // End j loop
     } // End i loop
+}
+
+
+void scalar_flux_divergence_wrapper(struct DimStruct *dims, double *alpha0, double *alpha0_half, double* velocity, 
+                                    double *flux, double *tendency, double dx, ssize_t d, int isNonConserv){
+    if(!isNonConserv)
+        scalar_flux_divergence(dims, alpha0, alpha0_half, flux, tendency, dx, d);
+    else
+        scalar_flux_divergence_nonconserv(dims, alpha0, alpha0_half, velocity, flux, tendency, dx, d);
 }
 
 

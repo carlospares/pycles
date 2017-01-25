@@ -3,6 +3,7 @@
 #include "advection_interpolation.h"
 #include "thermodynamic_functions.h"
 #include "entropies.h"
+#include <stdio.h>
 
 void second_order_a(const struct DimStruct *dims, double* restrict rho0, double* restrict rho0_half,const double* restrict velocity, const double* restrict scalar, double* restrict flux, int d){
 
@@ -335,7 +336,7 @@ void weno_fifth_order_a(const struct DimStruct *dims, double* restrict rho0, dou
     const ssize_t sp3 = 3 * sp1;
     const ssize_t sm1 = -sp1 ;
     const ssize_t sm2 = -2*sp1;
-
+    printf("5 old");
     if(d==2){
         for(ssize_t i=imin;i<imax;i++){
             const ssize_t ishift = i*istride ;
@@ -777,7 +778,7 @@ void hiweno_fifth_order(const struct DimStruct *dims, double* restrict rho0, dou
     const ssize_t sm2 = -2*sp1;
 
     double a;
-
+    printf("5 cons");
     if(d==2){
         for(ssize_t i=imin;i<imax;i++){
             const ssize_t ishift = i*istride ;
@@ -1200,7 +1201,8 @@ void hiweno_fifth_order_nonconserv(const struct DimStruct *dims, double* restric
     const ssize_t sp3 = 3 * sp1;
     const ssize_t sm1 = -sp1 ;
     const ssize_t sm2 = -2*sp1;
-
+    
+    printf("5 non cons");
     for(ssize_t i=imin;i<imax;i++){
         const ssize_t ishift = i*istride ;
         for(ssize_t j=jmin;j<jmax;j++){
@@ -1454,38 +1456,38 @@ void compute_advective_fluxes_a(struct DimStruct *dims, double* restrict rho0, d
     };
 };
 
-void compute_advective_fluxes_hiweno(struct DimStruct *dims, double* restrict rho0, double* rho0_half ,double* restrict velocity, double* restrict scalar,
-                                double* restrict flux, int d, int scheme){
-    switch(scheme){
+// void compute_advective_fluxes_hiweno(struct DimStruct *dims, double* restrict rho0, double* rho0_half ,double* restrict velocity, double* restrict scalar,
+                                // double* restrict flux, int d, int scheme){
+    // switch(scheme){
             
         // high order WENO, conservative
-        case 3:
-            hiweno_third_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
-            break;
-        case 5:
-            hiweno_fifth_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
-            break;
-        case 7:
-            hiweno_seventh_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
-            break;
-        case 9:
-            hiweno_ninth_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
-            break;
-        case 11:
-            hiweno_eleventh_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
-            break;
-        default:
-            hiweno_fifth_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
-            break;
-    };
-};
+        // case 3:
+            // hiweno_third_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
+            // break;
+        // case 5:
+            // hiweno_fifth_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
+            // break;
+        // case 7:
+            // hiweno_seventh_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
+            // break;
+        // case 9:
+            // hiweno_ninth_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
+            // break;
+        // case 11:
+            // hiweno_eleventh_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
+            // break;
+        // default:
+            // hiweno_fifth_order(dims, rho0, rho0_half, velocity, scalar, flux, d);
+            // break;
+    // };
+// };
 
 
 void compute_advective_fluxes_hiweno_nonconserv(struct DimStruct *dims, double* restrict rho0, double* rho0_half ,double* restrict velocity, 
                                                 double* restrict scalar, double* restrict flux, int d, int scheme){
     switch(scheme){
             
-        // high order WENO, conservative
+        // high order WENO, non conservative
         case 3:
             hiweno_third_order_nonconserv(dims, rho0, rho0_half, velocity, scalar, flux, d);
             break;
@@ -1507,6 +1509,84 @@ void compute_advective_fluxes_hiweno_nonconserv(struct DimStruct *dims, double* 
     };
 };
 
+
+void compute_advective_fluxes_wrapper(struct DimStruct *dims, double* restrict rho0, double* rho0_half ,double* restrict velocity_intercell, 
+                                double* restrict velocity_cellctr, double* restrict scalar,
+                                double* restrict flux, int d, int scheme){
+    printf("%d\n", scheme);
+    switch(scheme){
+        // original PyCLES' schemes
+        case 1:
+            upwind_first_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 2:
+            second_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 3:
+            weno_third_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 4:
+            fourth_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 5:
+            weno_fifth_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 6:
+            sixth_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 7:
+            weno_seventh_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 8:
+            eighth_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 9:
+            weno_ninth_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        case 11:
+            weno_eleventh_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+        
+        // high order WENO, conservative
+        case 103:
+            hiweno_third_order(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        case 105:
+            hiweno_fifth_order(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        case 107:
+            hiweno_seventh_order(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        case 109:
+            hiweno_ninth_order(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        case 111:
+            hiweno_eleventh_order(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+            
+        // high order WENO, non conservative
+        case 203:
+            hiweno_third_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        case 205:
+            hiweno_fifth_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        case 207:
+            hiweno_seventh_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        case 209:
+            hiweno_ninth_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        case 211:
+            hiweno_eleventh_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            break;
+        
+        default:
+            // Make WENO5 default case. The central schemes may not be necessarily stable, however WENO5 should be.
+            weno_fifth_order_a(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
+            break;
+    };
+};
 
 
 

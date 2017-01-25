@@ -12,7 +12,8 @@ cimport DiagnosticVariables
 cimport TimeStepping
 from NetCDFIO cimport NetCDFIO_Stats
 
-from FluxDivergence cimport scalar_flux_divergence, scalar_flux_divergence_nonconserv
+from FluxDivergence cimport scalar_flux_divergence #, scalar_flux_divergence_nonconserv
+from FluxDivergence cimport scalar_flux_divergence_wrapper
 from Thermodynamics cimport LatentHeat
 
 import numpy as np
@@ -24,18 +25,22 @@ cdef extern from "scalar_advection.h":
     void compute_advective_fluxes_a(Grid.DimStruct *dims, double *rho0, double *rho0_half, double *velocity,
                                     double *scalar, double* flux, int d, int scheme) nogil
                                     
-    void compute_advective_fluxes_hiweno(Grid.DimStruct *dims, double *rho0, double *rho0_half, double *velocity,
-                                         double *scalar, double* flux, int d, int scheme) nogil
+    # void compute_advective_fluxes_hiweno(Grid.DimStruct *dims, double *rho0, double *rho0_half, double *velocity,
+                                         # double *scalar, double* flux, int d, int scheme) nogil
                                     
     void compute_advective_fluxes_hiweno_nonconserv(Grid.DimStruct *dims, double *rho0, double *rho0_half,
                                         double *velocity, double *scalar, double* flux, int d, int scheme) nogil
+                                        
+    void compute_advective_fluxes_wrapper(Grid.DimStruct *dims, double *rho0, double *rho0_half,
+                                        double *velocity_intercell, double* velocity_cc, double *scalar, 
+                                        double* flux, int d, int scheme) nogil
 
     void compute_qt_sedimentation_s_source(Grid.DimStruct *dims, double *p0_half, double* rho0_half, double *flux,
                                     double* qt, double* qv, double* T, double* tendency, double (*lam_fp)(double),
                                     double (*L_fp)(double, double), double dx, Py_ssize_t d)nogil
                                     
 cdef extern from "positivity_preservation.h":
-    void positivity_preservation_xu(Grid.DimStruct *dims, double *u, double *v, double *w, double *ucc, double *vcc, double *wcc,
+    void positivity_preservation_xu(Grid.DimStruct *dims, double *ucc, double *vcc, double *wcc,
                                     double *scalar, double *flux, double *tendencies, double dt) nogil
 
 
@@ -79,6 +84,10 @@ cdef class ScalarAdvection:
 
 
         return
+        
+    # cpdef compute_advective_fluxes_wrapper(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs,PrognosticVariables.PrognosticVariables PV, 
+                 # DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa, double dt):
+                 
 
     cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs,PrognosticVariables.PrognosticVariables PV, 
                  DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa, double dt):
@@ -88,6 +97,18 @@ cdef class ScalarAdvection:
             Py_ssize_t s_shift = PV.get_varshift(Gr,'s')
             Py_ssize_t t_shift = DV.get_varshift(Gr,'temperature')
             Py_ssize_t ql_shift, qv_shift, qt_shift
+            int scheme
+            Py_ssize_t velcc_shift, velic_shift
+            bint isNonConservative
+        
+        if self.sa_type == "hiweno_conserv" and self.order % 2 == 1:
+            scheme = 100 + self.order
+        elif self.sa_type == "hiweno_nonconserv" and self.order % 2 == 1:
+            scheme = 200 + self.order
+        else:
+            scheme = self.order
+        isNonConservative = int(self.sa_type == "hiweno_nonconserv")
+        
         
         
         if self.positivity:
@@ -101,8 +122,7 @@ cdef class ScalarAdvection:
                         compute_advective_fluxes_hiweno_nonconserv(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
                                                             &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
                                                             
-                    positivity_preservation_xu(&Gr.dims,&PV.values[PV.get_varshift(Gr, 'u')], &PV.values[PV.get_varshift(Gr, 'v')],
-                                                &PV.values[PV.get_varshift(Gr, 'w')], &DV.values[DV.get_varshift(Gr, 'ucc')],
+                    positivity_preservation_xu(&Gr.dims, &DV.values[DV.get_varshift(Gr, 'ucc')],
                                                 &DV.values[DV.get_varshift(Gr, 'vcc')], &DV.values[DV.get_varshift(Gr, 'wcc')],
                                                 &PV.values[scalar_shift], &self.flux[scalar_count * (Gr.dims.dims * Gr.dims.npg)],
                                                 &PV.tendencies[scalar_shift], dt)
@@ -144,27 +164,36 @@ cdef class ScalarAdvection:
                                                    &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
 
                         # now the advective flux for all scalars
-                        
-                        if self.sa_type == "hiweno_conserv" and self.order % 2 == 1:
-                            vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
-                            compute_advective_fluxes_hiweno(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
-                                                   &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                            scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
-                                                   &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+                        velcc_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
+                        velic_shift = PV.velocity_directions[d]*Gr.dims.npg
+                        compute_advective_fluxes_wrapper(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&PV.values[velic_shift], 
+                                                        &DV.values[velcc_shift],&PV.values[scalar_shift],
+                                                        &self.flux[flux_shift], d, scheme)
+                        scalar_flux_divergence_wrapper(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&DV.values[velcc_shift],
+                                                       &self.flux[flux_shift], &PV.tendencies[scalar_shift],Gr.dims.dx[d],
+                                                       d, isNonConservative)
                                                    
-                        elif self.sa_type == "hiweno_nonconserv" and self.order % 2 == 1:
-                            vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
-                            compute_advective_fluxes_hiweno_nonconserv(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
-                                                   &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                            scalar_flux_divergence_nonconserv(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&DV.values[vel_shift],
-                                                    &self.flux[flux_shift], &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+                                                   
+                        # if self.sa_type == "hiweno_conserv" and self.order % 2 == 1:
+                            # vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
+                            # compute_advective_fluxes_hiweno(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
+                                                   # &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
+                            # scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
+                                                   # &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+                                                   
+                        # elif self.sa_type == "hiweno_nonconserv" and self.order % 2 == 1:
+                            # vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
+                            # compute_advective_fluxes_hiweno_nonconserv(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
+                                                   # &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
+                            # scalar_flux_divergence_nonconserv(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&DV.values[vel_shift],
+                                                    # &self.flux[flux_shift], &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
                         
-                        else:
-                            vel_shift = PV.velocity_directions[d]*Gr.dims.npg
-                            compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&PV.values[vel_shift],
-                                                   &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                            scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
-                                                   &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
+                        # else:
+                            # vel_shift = PV.velocity_directions[d]*Gr.dims.npg
+                            # compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&PV.values[vel_shift],
+                                                   # &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
+                            # scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
+                                                   # &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
 
 
                     scalar_count += 1
