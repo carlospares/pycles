@@ -20,3 +20,5 @@ cdef class VelocityEnoReconstructions:
     cdef void computeUndividedDifferenceVdir(self, Grid.Grid Gr, double [:] velocities, int vel_shift, int d)
     cdef void EnoRecCellCenterVdir(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
                                     double [:] velocities, int vel_shift, int d, int cc_shift, int offset)
+    cdef void CentralCellCenterVdir(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
+                                    double [:] velocities, int vel_shift, int d, int cc_shift)

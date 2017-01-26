@@ -4,7 +4,6 @@
 #cython: initializedcheck=False
 #cython: cdivision=True
 
-
 cimport Grid
 cimport ReferenceState
 cimport PrognosticVariables
@@ -16,12 +15,11 @@ from libc.math cimport fabs, fmax
 
 import cython
 
-#cdef extern from "scalar_diffusion.h":
-#    void compute_diffusive_flux(Grid.DimStruct *dims, double *alpha0, double *alpha0_half, double *diffusivity,
-#                                double *scalar, double *flux, double dx, size_t d, Py_ssize_t scheme, double factor)
-#    void compute_qt_diffusion_s_source(Grid.DimStruct *dims, double *p0_half, double *alpha0, double *alpha0_half,
-#                                       double *flux, double *qt, double *qv, double *T, double *tendency, double (*lam_fp)(double),
-#                                       double (*L_fp)(double, double), double dx, Py_ssize_t d )
+
+cdef extern from "advection_interpolation.h":
+    double interp_6_pt(double phim2, double phim1, double phi, double phip1,
+                double phip2, double phip3) nogil
+
 
 @cython.boundscheck(False)
 cdef inline double dot(double [:] vec1, double [:] vec2, int n) nogil:
@@ -62,14 +60,18 @@ cdef class VelocityEnoReconstructions:
         # self.computeUndividedDifferences(Gr, PV)
         # self.EnoRecCellCenter(Gr, PV, DV)
         
-        self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
-        self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), 0)
+        # self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
+        # self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), 0)
         
-        self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'v'), 1)
-        self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), 0)
+        # self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'v'), 1)
+        # self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), 0)
         
-        self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'w'), 2)
-        self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), 0)
+        # self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'w'), 2)
+        # self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), 0)
+        
+        self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'));
+        self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'));
+        self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'));
         
         DV.communicate_variable(Gr, Pa, DV.get_nv('ucc'))
         DV.communicate_variable(Gr, Pa, DV.get_nv('vcc'))
@@ -213,7 +215,35 @@ cdef class VelocityEnoReconstructions:
                         offsetr = right - i_d - offset
                         DV.values[cc_shift + ijk] = dot(c[(lshift+1)*order : (lshift+2)*order], velocities[ (vel_shift + ijk + offsetl*strides[0]) : (vel_shift + ijk + offsetr*strides[0])+1 : strides[0]], order)
             
+            
+    @cython.boundscheck(False)           
+    cdef void CentralCellCenterVdir(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
+                                    double [:] velocities, int vel_shift, int d, int cc_shift):
+        cdef:
+            Py_ssize_t block_size, block_offset, ijk
+            Py_ssize_t istride = Gr.dims.nlg[1] * Gr.dims.nlg[2]
+            Py_ssize_t jstride = Gr.dims.nlg[2]
+            Py_ssize_t gw = Gr.dims.gw
+            Py_ssize_t order = self.enoOrder
+            Py_ssize_t strides[3];
+            Py_ssize_t i, j, k
+            
+        strides = [istride, jstride, 1]
+        cdef Py_ssize_t stride = strides[d]
         
+        
+        with nogil:
+            for i in range(gw, Gr.dims.nlg[0]-gw):
+                for j in range(gw, Gr.dims.nlg[1]-gw):
+                    for k in range(gw, Gr.dims.nlg[2]-gw):
+                        ijk = i*istride + j*jstride + k
+                        DV.values[cc_shift + ijk] = interp_6_pt(velocities[ vel_shift + ijk + -2*stride ],
+                                                                velocities[ vel_shift + ijk + -stride ],
+                                                                velocities[ vel_shift + ijk ],
+                                                                velocities[ vel_shift + ijk + stride ],
+                                                                velocities[ vel_shift + ijk + 2*stride ],
+                                                                velocities[ vel_shift + ijk + 3*stride ] )
+
     # cdef void computeUndividedDifferences(self, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV):
         # cdef:            
             # Py_ssize_t block_size, block_offset, ijk
