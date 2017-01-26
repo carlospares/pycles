@@ -1561,19 +1561,19 @@ void compute_advective_fluxes_wrapper(struct DimStruct *dims, double* restrict r
             
         // high order WENO, non conservative
         case 203:
-            hiweno_third_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            hiweno_third_order_nonconserv(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
             break;
         case 205:
-            hiweno_fifth_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            hiweno_fifth_order_nonconserv(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
             break;
         case 207:
-            hiweno_seventh_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            hiweno_seventh_order_nonconserv(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
             break;
         case 209:
-            hiweno_ninth_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            hiweno_ninth_order_nonconserv(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
             break;
         case 211:
-            hiweno_eleventh_order_nonconserv(dims, rho0, rho0_half, velocity_cellctr, scalar, flux, d);
+            hiweno_eleventh_order_nonconserv(dims, rho0, rho0_half, velocity_intercell, scalar, flux, d);
             break;
         
         default:

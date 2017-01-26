@@ -79,6 +79,34 @@ cdef class VelocityEnoReconstructions:
         
         return
         
+    @cython.boundscheck(False)           
+    cdef void CentralCellCenterVdir(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
+                                    double [:] velocities, int vel_shift, int d, int cc_shift):
+        cdef:
+            Py_ssize_t ijk
+            Py_ssize_t istride = Gr.dims.nlg[1] * Gr.dims.nlg[2]
+            Py_ssize_t jstride = Gr.dims.nlg[2]
+            Py_ssize_t gw = Gr.dims.gw
+            Py_ssize_t order = self.enoOrder
+            Py_ssize_t strides[3];
+            Py_ssize_t i, j, k
+            
+        strides = [istride, jstride, 1]
+        cdef Py_ssize_t stride = strides[d]
+        
+        
+        with nogil:
+            for i in range(gw, Gr.dims.nlg[0]-gw):
+                for j in range(gw, Gr.dims.nlg[1]-gw):
+                    for k in range(gw, Gr.dims.nlg[2]-gw):
+                        ijk = i*istride + j*jstride + k
+                        DV.values[cc_shift + ijk] = interp_6_pt(velocities[ vel_shift + ijk + -2*stride ],
+                                                                velocities[ vel_shift + ijk + -stride ],
+                                                                velocities[ vel_shift + ijk ],
+                                                                velocities[ vel_shift + ijk + stride ],
+                                                                velocities[ vel_shift + ijk + 2*stride ],
+                                                                velocities[ vel_shift + ijk + 3*stride ] )
+        
     cpdef enoCrossReconstructions(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
         ### interpolate u at v's location: u@v
         self.computeUndividedDifferenceVdir(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 1)
@@ -216,33 +244,7 @@ cdef class VelocityEnoReconstructions:
                         DV.values[cc_shift + ijk] = dot(c[(lshift+1)*order : (lshift+2)*order], velocities[ (vel_shift + ijk + offsetl*strides[0]) : (vel_shift + ijk + offsetr*strides[0])+1 : strides[0]], order)
             
             
-    @cython.boundscheck(False)           
-    cdef void CentralCellCenterVdir(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
-                                    double [:] velocities, int vel_shift, int d, int cc_shift):
-        cdef:
-            Py_ssize_t block_size, block_offset, ijk
-            Py_ssize_t istride = Gr.dims.nlg[1] * Gr.dims.nlg[2]
-            Py_ssize_t jstride = Gr.dims.nlg[2]
-            Py_ssize_t gw = Gr.dims.gw
-            Py_ssize_t order = self.enoOrder
-            Py_ssize_t strides[3];
-            Py_ssize_t i, j, k
-            
-        strides = [istride, jstride, 1]
-        cdef Py_ssize_t stride = strides[d]
-        
-        
-        with nogil:
-            for i in range(gw, Gr.dims.nlg[0]-gw):
-                for j in range(gw, Gr.dims.nlg[1]-gw):
-                    for k in range(gw, Gr.dims.nlg[2]-gw):
-                        ijk = i*istride + j*jstride + k
-                        DV.values[cc_shift + ijk] = interp_6_pt(velocities[ vel_shift + ijk + -2*stride ],
-                                                                velocities[ vel_shift + ijk + -stride ],
-                                                                velocities[ vel_shift + ijk ],
-                                                                velocities[ vel_shift + ijk + stride ],
-                                                                velocities[ vel_shift + ijk + 2*stride ],
-                                                                velocities[ vel_shift + ijk + 3*stride ] )
+
 
     # cdef void computeUndividedDifferences(self, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV):
         # cdef:            
