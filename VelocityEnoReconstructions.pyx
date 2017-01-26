@@ -100,12 +100,12 @@ cdef class VelocityEnoReconstructions:
                 for j in range(gw, Gr.dims.nlg[1]-gw):
                     for k in range(gw, Gr.dims.nlg[2]-gw):
                         ijk = i*istride + j*jstride + k
-                        DV.values[cc_shift + ijk] = interp_6_pt(velocities[ vel_shift + ijk + -2*stride ],
-                                                                velocities[ vel_shift + ijk + -stride ],
+                        DV.values[cc_shift + ijk] = interp_6_pt(velocities[ vel_shift + ijk + -3*stride ],
+                                                                velocities[ vel_shift + ijk + -2*stride ],
+                                                                velocities[ vel_shift + ijk - stride],
                                                                 velocities[ vel_shift + ijk ],
                                                                 velocities[ vel_shift + ijk + stride ],
-                                                                velocities[ vel_shift + ijk + 2*stride ],
-                                                                velocities[ vel_shift + ijk + 3*stride ] )
+                                                                velocities[ vel_shift + ijk + 2*stride ] )
         
     cpdef enoCrossReconstructions(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
         ### interpolate u at v's location: u@v
@@ -154,6 +154,7 @@ cdef class VelocityEnoReconstructions:
 # or in general:
 # udd[ (i_f*nEg + i_e)*(nDg*enoOrder) + n*nDg + i_d]
 
+    #### TODO: Fix indexing!
     cdef void computeUndividedDifferenceVdir(self, Grid.Grid Gr, double [:] velocities, int vel_shift, int d):
         cdef:
             Py_ssize_t block_size, block_offset, ijk
@@ -188,6 +189,8 @@ cdef class VelocityEnoReconstructions:
                     for i in range(nlgd - n):
                         self.udd[ block_offset + n*nlgd + i_d] = self.udd[block_offset + (n-1)*nlgd + i_d+1] - self.udd[block_offset + (n-1)*nlgd + i_d]
         
+        
+    #### TODO: Fix indexing!
     @cython.boundscheck(False)           
     cdef void EnoRecCellCenterVdir(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
                                     double [:] velocities, int vel_shift, int d, int cc_shift, int offset):

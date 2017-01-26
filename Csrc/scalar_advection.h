@@ -727,7 +727,7 @@ void hiweno_third_order(const struct DimStruct *dims, double* restrict rho0, dou
                 } // End k loop 
             } // End j loop
         } // End i loop
-    } // End if
+    } // End if d==2
     else{
         for(ssize_t i=imin;i<imax;i++){
             const ssize_t ishift = i*istride ;
@@ -1172,7 +1172,7 @@ void hiweno_third_order_nonconserv(const struct DimStruct *dims, double* restric
                                                  scalar[ijk+sp1],
                                                  scalar[ijk]);
 
-                flux[ijk] = (velocity[ijk + sp1] >= 0)*phip + (velocity[ijk + sp1] < 0)*phim;
+                flux[ijk] = (velocity[ijk] >= 0)*phip + (velocity[ijk] < 0)*phim;
             } // End k loop
         } // End j loop
     } // End i loop
@@ -1220,7 +1220,7 @@ void hiweno_fifth_order_nonconserv(const struct DimStruct *dims, double* restric
                                                  scalar[ijk],
                                                  scalar[ijk + sm1]);
 
-                flux[ijk] = (velocity[ijk + sp1] >= 0)*phip + (velocity[ijk + sp1] < 0)*phim;
+                flux[ijk] = (velocity[ijk] >= 0)*phip + (velocity[ijk] < 0)*phim;
             } // End k loop
         } // End j loop
     } // End i loop
@@ -1275,7 +1275,7 @@ void hiweno_seventh_order_nonconserv(const struct DimStruct *dims, double* restr
                                                  scalar[ijk + sm1],
                                                  scalar[ijk + sm2]);
 
-                flux[ijk] = (velocity[ijk + sp1] >= 0)*phip + (velocity[ijk + sp1] < 0)*phim;
+                flux[ijk] = (velocity[ijk] >= 0)*phip + (velocity[ijk] < 0)*phim;
             } // End k loop
         } // End j loop
     } // End i loop
@@ -1336,7 +1336,7 @@ void hiweno_ninth_order_nonconserv(const struct DimStruct *dims, double* restric
                                                  scalar[ijk + sm2],
                                                  scalar[ijk + sm3]);
 
-                flux[ijk] = (velocity[ijk + sp1] >= 0)*phip + (velocity[ijk + sp1] < 0)*phim;
+                flux[ijk] = (velocity[ijk] >= 0)*phip + (velocity[ijk] < 0)*phim;
             } // End k loop
         } // End j loop
     } // End i loop
@@ -1403,7 +1403,7 @@ void hiweno_eleventh_order_nonconserv(const struct DimStruct *dims, double* rest
                                                   scalar[ijk + sm3],
                                                   scalar[ijk + sm4]);
 
-                flux[ijk] = (velocity[ijk + sp1] >= 0)*phip + (velocity[ijk + sp1] < 0)*phim;
+                flux[ijk] = (velocity[ijk] >= 0)*phip + (velocity[ijk] < 0)*phim;
             } // End k loop
         } // End j loop
     } // End i loop

@@ -84,10 +84,7 @@ cdef class ScalarAdvection:
 
 
         return
-        
-    # cpdef compute_advective_fluxes_wrapper(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs,PrognosticVariables.PrognosticVariables PV, 
-                 # DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa, double dt):
-                 
+                
 
     cpdef update(self, Grid.Grid Gr, ReferenceState.ReferenceState Rs,PrognosticVariables.PrognosticVariables PV, 
                  DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa, double dt):
