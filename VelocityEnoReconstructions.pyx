@@ -17,8 +17,13 @@ import cython
 
 
 cdef extern from "advection_interpolation.h":
+    double interp_4_pt(double phim1, double phi, double phip1, double phip2) nogil
     double interp_6_pt(double phim2, double phim1, double phi, double phip1,
                 double phip2, double phip3) nogil
+    double interp_8_pt(double phim3, double phim2, double phim1, double phi, 
+                       double phip1, double phip2, double phip3, double phip4) nogil
+    double interp_10_pt(double phim4, double phim3, double phim2, double phim1, double phi, 
+                       double phip1, double phip2, double phip3, double phip4, double phip5) nogil
 
 
 @cython.boundscheck(False)
@@ -96,16 +101,55 @@ cdef class VelocityEnoReconstructions:
         
         
         with nogil:
-            for i in range(gw, Gr.dims.nlg[0]-gw):
-                for j in range(gw, Gr.dims.nlg[1]-gw):
-                    for k in range(gw, Gr.dims.nlg[2]-gw):
-                        ijk = i*istride + j*jstride + k
-                        DV.values[cc_shift + ijk] = interp_6_pt(velocities[ vel_shift + ijk + -3*stride ],
-                                                                velocities[ vel_shift + ijk + -2*stride ],
-                                                                velocities[ vel_shift + ijk - stride],
-                                                                velocities[ vel_shift + ijk ],
-                                                                velocities[ vel_shift + ijk + stride ],
-                                                                velocities[ vel_shift + ijk + 2*stride ] )
+            if self.enoOrder == 3:
+                for i in range(gw, Gr.dims.nlg[0]-gw):
+                    for j in range(gw, Gr.dims.nlg[1]-gw):
+                        for k in range(gw, Gr.dims.nlg[2]-gw):
+                            ijk = i*istride + j*jstride + k
+                            DV.values[cc_shift + ijk] = interp_4_pt(velocities[ vel_shift + ijk + -2*stride ],
+                                                                    velocities[ vel_shift + ijk - stride],
+                                                                    velocities[ vel_shift + ijk ],
+                                                                    velocities[ vel_shift + ijk + stride ] )
+            # 5 is at the end as default case
+            elif self.enoOrder == 7:
+                for i in range(gw, Gr.dims.nlg[0]-gw):
+                    for j in range(gw, Gr.dims.nlg[1]-gw):
+                        for k in range(gw, Gr.dims.nlg[2]-gw):
+                            ijk = i*istride + j*jstride + k
+                            DV.values[cc_shift + ijk] = interp_8_pt(velocities[ vel_shift + ijk + -4*stride ],
+                                                                    velocities[ vel_shift + ijk + -3*stride ],
+                                                                    velocities[ vel_shift + ijk + -2*stride ],
+                                                                    velocities[ vel_shift + ijk - stride],
+                                                                    velocities[ vel_shift + ijk ],
+                                                                    velocities[ vel_shift + ijk + stride ],
+                                                                    velocities[ vel_shift + ijk + 2*stride ],
+                                                                    velocities[ vel_shift + ijk + 3*stride ])
+            elif self.enoOrder == 9:
+                for i in range(gw, Gr.dims.nlg[0]-gw):
+                    for j in range(gw, Gr.dims.nlg[1]-gw):
+                        for k in range(gw, Gr.dims.nlg[2]-gw):
+                            ijk = i*istride + j*jstride + k
+                            DV.values[cc_shift + ijk] = interp_10_pt(velocities[ vel_shift + ijk + -5*stride ],
+                                                                    velocities[ vel_shift + ijk + -4*stride ],
+                                                                    velocities[ vel_shift + ijk + -3*stride ],
+                                                                    velocities[ vel_shift + ijk + -2*stride ],
+                                                                    velocities[ vel_shift + ijk - stride],
+                                                                    velocities[ vel_shift + ijk ],
+                                                                    velocities[ vel_shift + ijk + stride ],
+                                                                    velocities[ vel_shift + ijk + 2*stride ],
+                                                                    velocities[ vel_shift + ijk + 3*stride ],
+                                                                    velocities[ vel_shift + ijk + 4*stride ])
+            else: # 5 or default
+                for i in range(gw, Gr.dims.nlg[0]-gw):
+                    for j in range(gw, Gr.dims.nlg[1]-gw):
+                        for k in range(gw, Gr.dims.nlg[2]-gw):
+                            ijk = i*istride + j*jstride + k
+                            DV.values[cc_shift + ijk] = interp_6_pt(velocities[ vel_shift + ijk + -3*stride ],
+                                                                    velocities[ vel_shift + ijk + -2*stride ],
+                                                                    velocities[ vel_shift + ijk - stride],
+                                                                    velocities[ vel_shift + ijk ],
+                                                                    velocities[ vel_shift + ijk + stride ],
+                                                                    velocities[ vel_shift + ijk + 2*stride ] )
         
     cpdef enoCrossReconstructions(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
         ### interpolate u at v's location: u@v
