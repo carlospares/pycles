@@ -65,18 +65,18 @@ cdef class VelocityEnoReconstructions:
         # self.computeUndividedDifferences(Gr, PV)
         # self.EnoRecCellCenter(Gr, PV, DV)
         
-        # self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
-        # self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1)
+        self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
+        self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1)
         
-        # self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'v'), 1)
-        # self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1)
+        self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'v'), 1)
+        self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1)
         
-        # self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'w'), 2)
-        # self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1)
+        self.computeUndividedDifferenceVdir(Gr, PV.values, PV.get_varshift(Gr, 'w'), 2)
+        self.EnoRecCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1)
         
-        self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1);
-        self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1);
-        self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1);
+        # self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1);
+        # self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1);
+        # self.CentralCellCenterVdir(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1);
         
         DV.communicate_variable(Gr, Pa, DV.get_nv('ucc'))
         DV.communicate_variable(Gr, Pa, DV.get_nv('vcc'))
