@@ -17,8 +17,8 @@ cimport numpy as np
 
 cdef extern from "momentum_advection.h":
     void compute_advective_tendencies_m(Grid.DimStruct *dims, double *rho0, double *rho0_half,
-                                    double *alpha0, double *alpha0_half, double *vel_advected, double *vel_advecting_rec,
-                                    double *vel_advecting, double *tendency, Py_ssize_t d_advected,
+                                    double *alpha0, double *alpha0_half, double *vel_advected, double *vel_advecting,
+                                    double *vel_advecting_rec, double *tendency, Py_ssize_t d_advected,
                                     Py_ssize_t d_advecting, Py_ssize_t scheme) nogil
 cdef class MomentumAdvection:
     def __init__(self, namelist, ParallelMPI.ParallelMPI Pa):
@@ -59,6 +59,7 @@ cdef class MomentumAdvection:
             Py_ssize_t shift_advecting
             Py_ssize_t shift_advecting_rec = 0
             str cross_name
+            double * advectant_rec
 
 
         for i_advected in xrange(Gr.dims.dims):
@@ -69,17 +70,22 @@ cdef class MomentumAdvection:
 
                 # Compute the shift to the starting location of the advecting
                 # velocity in the PV values array
-                shift_advecting = PV.velocity_directions[i_advecting] * Gr.dims.npg
+                shift_advecting = PV.velocity_directions[i_advecting] * Gr.dims.npg 
                 
                 if i_advecting != i_advected:
+                    # cross-flux => need reconstructions
                     cross_name = PV.velocity_names_directional[i_advecting] + "@" + PV.velocity_names_directional[i_advected]
                     shift_advecting_rec = DV.get_varshift(Gr, cross_name)
+                    advectant_rec = &DV.values[shift_advecting_rec]
+                else: 
+                    # d-by-d => we can use the actual values as reconstruction
+                    advectant_rec = &PV.values[shift_advecting]
                 
                     
                 # Compute the fluxes
                 compute_advective_tendencies_m(&Gr.dims, &Rs.rho0[0], &Rs.rho0_half[0], &Rs.alpha0[0], &Rs.alpha0_half[0],
                                             &PV.values[shift_advected], &PV.values[shift_advecting],
-                                            &DV.values[shift_advecting_rec],
+                                            advectant_rec, #&DV.values[shift_advecting_rec],
                                             &PV.tendencies[shift_advected], i_advected, i_advecting, self.scheme)
         return
 
