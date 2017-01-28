@@ -38,15 +38,15 @@ cdef class VelocityEnoReconstructions:
     def __init__(self, namelist, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
         DV.add_variables('ucc','m/s','sym',Pa)
         DV.add_variables('vcc','m/s','sym',Pa)
-        DV.add_variables('wcc','m/s','asym',Pa)
+        DV.add_variables('wcc','m/s','asym_half',Pa)
         
         ### cross reconstructions
         DV.add_variables('u@v','m/s','sym',Pa)
         DV.add_variables('u@w','m/s','sym',Pa)
         DV.add_variables('v@u','m/s','sym',Pa)
         DV.add_variables('v@w','m/s','sym',Pa)
-        DV.add_variables('w@u','m/s','asym',Pa)
-        DV.add_variables('w@v','m/s','asym',Pa)
+        DV.add_variables('w@u','m/s','asym_half',Pa)
+        DV.add_variables('w@v','m/s','asym_half',Pa)
         
         # Important! ENO rec will not work if gw < order-2
         self.enoOrder = namelist['scalar_transport']['order']

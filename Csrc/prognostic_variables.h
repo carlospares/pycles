@@ -227,6 +227,11 @@ void set_bcs(ssize_t dim, ssize_t s, double bc_factor ,struct DimStruct *dims,
                                 values[ishift + jshift + bc_start +k  ] = values[ishift + jshift + bc_start -1 ];
                              }
                         }
+                        else if(bc_factor == -0.5){
+                            for(k=0;k<dims->gw;k++){
+                                values[ishift + jshift + bc_start + k] = -values[ishift + jshift +  bc_start - k - 1];
+                            }
+                        }
                         else{
                             values[ishift + jshift + bc_start ] = 0.0;
                             for(k=1;k<dims->gw;k++){
@@ -251,6 +256,11 @@ void set_bcs(ssize_t dim, ssize_t s, double bc_factor ,struct DimStruct *dims,
                         else if(bc_factor == 2.0){
                             for(k=0;k<dims->gw;k++){
                                 values[ishift + jshift + bc_start -k ] = values[ishift + jshift + bc_start + 1];
+                            }
+                        }
+                        else if(bc_factor == -0.5){
+                            for(k=0;k<dims->gw;k++){
+                                values[ishift + jshift + bc_start - k] = -values[ishift + jshift + bc_start +k + 1 ];
                             }
                         }
                         else{
