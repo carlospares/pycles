@@ -238,7 +238,7 @@ cdef class VelocityEnoReconstructions:
                         lshift = i_d + offset - left
                         offsetl = left - i_d - offset
                         offsetr = right - i_d - offset
-                        DV.values[cc_shift + ijk] = dot(c[(lshift+1)*order : (lshift+2)*order], velocities[ (vel_shift + ijk + offsetl*strides[0]) : (vel_shift + ijk + offsetr*strides[0])+1 : strides[0]], order)
+                        DV.values[cc_shift + ijk] = dot(c[(lshift+1)*order : (lshift+2)*order], velocities[ (vel_shift + ijk + (offsetl+offset)*strides[0]) : (vel_shift + ijk + (offset+offsetr)*strides[0])+1 : strides[0]], order)
 
     @cython.boundscheck(False)           
     cdef void centralRec(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
