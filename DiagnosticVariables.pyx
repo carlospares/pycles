@@ -42,8 +42,10 @@ cdef class DiagnosticVariables:
             self.bc_type = np.append(self.bc_type,[1.0])
         elif bc_type =="asym":
             self.bc_type = np.append(self.bc_type,[-1.0])
-        elif bc_type == "asym_half":
-            self.bc_type = np.append(self.bc_type,[-0.5]);
+        elif bc_type == "asym_half": # asymmetric set at cell centers
+            self.bc_type = np.append(self.bc_type,[-0.5])
+        elif bc_type == "sym_int": # symmetric set at vertical cell interfaces
+            self.bc_type = np.append(self.bc_type, [0.5])
         else:
             Pa.root_print("Not a valid bc_type. Killing simulation now!")
             Pa.kill()

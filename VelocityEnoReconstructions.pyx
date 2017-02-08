@@ -42,9 +42,9 @@ cdef class VelocityEnoReconstructions:
         
         ### cross reconstructions
         DV.add_variables('u@v','m/s','sym',Pa)
-        DV.add_variables('u@w','m/s','sym',Pa)
+        DV.add_variables('u@w','m/s','sym_int',Pa)
         DV.add_variables('v@u','m/s','sym',Pa)
-        DV.add_variables('v@w','m/s','sym',Pa)
+        DV.add_variables('v@w','m/s','sym_int',Pa)
         DV.add_variables('w@u','m/s','asym_half',Pa)
         DV.add_variables('w@v','m/s','asym_half',Pa)
         

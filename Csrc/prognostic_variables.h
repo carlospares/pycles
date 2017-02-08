@@ -227,11 +227,16 @@ void set_bcs(ssize_t dim, ssize_t s, double bc_factor ,struct DimStruct *dims,
                                 values[ishift + jshift + bc_start +k  ] = values[ishift + jshift + bc_start -1 ];
                              }
                         }
-                        else if(bc_factor == -0.5){
+                        else if(bc_factor == -0.5){ // asymmetric at cell centers
                             for(k=0;k<dims->gw;k++){
                                 values[ishift + jshift + bc_start + k] = -values[ishift + jshift +  bc_start - k - 1];
                             }
                         }
+                        else if(bc_factor == 0.5){ // symmetric at vertical cell interfaces
+							for(k=0;k<dims->gw;k++){
+								values[ishift + jshift + bc_start + k] = values[ishift + jshift +  bc_start - k - 2];
+							}
+						}
                         else{
                             values[ishift + jshift + bc_start ] = 0.0;
                             for(k=1;k<dims->gw;k++){
@@ -258,9 +263,15 @@ void set_bcs(ssize_t dim, ssize_t s, double bc_factor ,struct DimStruct *dims,
                                 values[ishift + jshift + bc_start -k ] = values[ishift + jshift + bc_start + 1];
                             }
                         }
-                        else if(bc_factor == -0.5){
+                        else if(bc_factor == -0.5){ //asymmetric at cell centers
                             for(k=0;k<dims->gw;k++){
                                 values[ishift + jshift + bc_start - k] = -values[ishift + jshift + bc_start +k + 1 ];
+                            }
+                        }
+                        else if(bc_factor == 0.5){ //symmetric at vertical cell interfaces
+							values[ishift + jshift + bc_start] = values[ishift + jshift + bc_start + 1]; // THIS IS A BAD IDEA
+                            for(k=1;k<dims->gw;k++){
+                                values[ishift + jshift + bc_start - k] = values[ishift + jshift + bc_start + k  ];
                             }
                         }
                         else{
