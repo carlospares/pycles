@@ -227,7 +227,7 @@ cdef class VelocityEnoReconstructions:
             for i_e in range(gw, nlge-gw):
                 for i_f in range(gw, nlgf-gw):
                     block_offset = (i_f*nlge + i_e)*block_size
-                    for i_d in range(gw, nlgd-gw):
+                    for i_d in range(gw-1, nlgd-gw): # compute interpolations at bottom layer for the sym_int case
                         ijk = i_d*strides[0] + i_e*strides[1] + i_f*strides[2]
                         left = i_d + offset
                         right = i_d+1 + offset
@@ -263,7 +263,7 @@ cdef class VelocityEnoReconstructions:
             if self.enoOrder == 3:
                 for i in range(gw, Gr.dims.nlg[0]-gw):
                     for j in range(gw, Gr.dims.nlg[1]-gw):
-                        for k in range(gw, Gr.dims.nlg[2]-gw):
+                        for k in range(gw-1, Gr.dims.nlg[2]-gw):
                             ijk = i*istride + j*jstride + k
                             DV.values[cc_shift + ijk] = interp_4_pt(velocities[ vel_shift + ijk + -2*stride + offsetstr],
                                                                     velocities[ vel_shift + ijk - stride + offsetstr],
@@ -274,7 +274,7 @@ cdef class VelocityEnoReconstructions:
             elif self.enoOrder == 7:
                 for i in range(gw, Gr.dims.nlg[0]-gw):
                     for j in range(gw, Gr.dims.nlg[1]-gw):
-                        for k in range(gw, Gr.dims.nlg[2]-gw):
+                        for k in range(gw-1, Gr.dims.nlg[2]-gw):
                             ijk = i*istride + j*jstride + k
                             DV.values[cc_shift + ijk] = interp_8_pt(velocities[ vel_shift + ijk + -4*stride + offsetstr ],
                                                                     velocities[ vel_shift + ijk + -3*stride + offsetstr ],
@@ -287,7 +287,7 @@ cdef class VelocityEnoReconstructions:
             elif self.enoOrder == 9:
                 for i in range(gw, Gr.dims.nlg[0]-gw):
                     for j in range(gw, Gr.dims.nlg[1]-gw):
-                        for k in range(gw, Gr.dims.nlg[2]-gw):
+                        for k in range(gw-1, Gr.dims.nlg[2]-gw):
                             ijk = i*istride + j*jstride + k
                             DV.values[cc_shift + ijk] = interp_10_pt(velocities[ vel_shift + ijk + -5*stride + offsetstr ],
                                                                     velocities[ vel_shift + ijk + -4*stride + offsetstr ],
@@ -302,7 +302,7 @@ cdef class VelocityEnoReconstructions:
             else: # 5 or default
                 for i in range(gw, Gr.dims.nlg[0]-gw):
                     for j in range(gw, Gr.dims.nlg[1]-gw):
-                        for k in range(gw, Gr.dims.nlg[2]-gw):
+                        for k in range(gw-1, Gr.dims.nlg[2]-gw):
                             ijk = i*istride + j*jstride + k
                             DV.values[cc_shift + ijk] = interp_6_pt(velocities[ vel_shift + ijk + -3*stride + offsetstr ],
                                                                     velocities[ vel_shift + ijk + -2*stride + offsetstr ],
