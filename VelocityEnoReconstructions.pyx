@@ -61,16 +61,16 @@ cdef class VelocityEnoReconstructions:
         
         self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
         self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1)
-        
+         
         self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'v'), 1)
         self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1)
-        
+         
         self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'w'), 2)
         self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1)
         
-        # self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1);
-        # self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1);
-        # self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1);
+#         self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1);
+#         self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1);
+#         self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1);
         
         DV.communicate_variable(Gr, Pa, DV.get_nv('ucc'))
         DV.communicate_variable(Gr, Pa, DV.get_nv('vcc'))
@@ -227,7 +227,7 @@ cdef class VelocityEnoReconstructions:
             for i_e in range(gw, nlge-gw):
                 for i_f in range(gw, nlgf-gw):
                     block_offset = (i_f*nlge + i_e)*block_size
-                    for i_d in range(gw-1, nlgd-gw): # compute interpolations at bottom layer for the sym_int case
+                    for i_d in range(gw-1, nlgd-gw): # -1 extra to compute interpolations at bottom layer for the sym_int case (when d==2)
                         ijk = i_d*strides[0] + i_e*strides[1] + i_f*strides[2]
                         left = i_d + offset
                         right = i_d+1 + offset
