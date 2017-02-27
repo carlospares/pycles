@@ -167,7 +167,7 @@ class Simulation3d:
                 
                 
                 self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
-                self.VelENO.enoCrossReconstructions(self.Gr, self.DV, self.Pa)
+#                 self.VelENO.enoCrossReconstructions(self.Gr, self.DV, self.Pa)
                 
                 
                 self.SA.update(self.Gr,self.Ref,PV_, DV_, self.Pa, self.TS.dt)
@@ -189,7 +189,7 @@ class Simulation3d:
                 self.Pr.update(self.Gr, self.Ref, self.DV, self.PV, self.Pa)
                 self.TS.adjust_timestep(self.Gr, self.PV, self.DV,self.Pa)
                 
-#                 self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
+                self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
 #                 self.VelENO.enoCrossReconstructions(self.Gr, self.DV, self.Pa)
                 
                 self.io()

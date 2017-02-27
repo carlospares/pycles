@@ -61,10 +61,10 @@ cdef class VelocityEnoReconstructions:
         
         self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
         self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1)
-         
+           
         self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'v'), 1)
         self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1)
-         
+           
         self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'w'), 2)
         self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1)
         
@@ -221,7 +221,7 @@ cdef class VelocityEnoReconstructions:
             c = np.array([2.9326171875,-5.865234375,8.7978515625,-8.37890625,4.8876953125,-1.599609375,0.2255859375,  0.2255859375,1.353515625,-1.1279296875,0.90234375,-0.4833984375,0.150390625,-0.0205078125,  -0.0205078125,0.369140625,0.9228515625,-0.41015625,0.1845703125,-0.052734375,0.0068359375,  0.0068359375,-0.068359375,0.5126953125,0.68359375,-0.1708984375,0.041015625,-0.0048828125,  -0.0048828125,0.041015625,-0.1708984375,0.68359375,0.5126953125,-0.068359375,0.0068359375,  0.0068359375,-0.052734375,0.1845703125,-0.41015625,0.9228515625,0.369140625,-0.0205078125,  -0.0205078125,0.150390625,-0.4833984375,0.90234375,-1.1279296875,1.353515625,0.2255859375,  0.2255859375,-1.599609375,4.8876953125,-8.37890625,8.7978515625,-5.865234375,2.9326171875 ])
         elif order == 9:
             c = np.array([3.338470458984375,-8.902587890625,18.6954345703125,-26.707763671875,25.96588134765625,-16.995849609375,7.1905517578125,-1.780517578125,0.196380615234375,  0.196380615234375,1.571044921875,-1.8328857421875,2.199462890625,-1.96380615234375,1.221923828125,-0.4998779296875,0.120849609375,-0.013092041015625,  -0.013092041015625,0.314208984375,1.0997314453125,-0.733154296875,0.54986572265625,-0.314208984375,0.1221923828125,-0.028564453125,0.003021240234375,  0.003021240234375,-0.040283203125,0.4229736328125,0.845947265625,-0.35247802734375,0.169189453125,-0.0604248046875,0.013427734375,-0.001373291015625,   -0.001373291015625,0.015380859375,-0.0897216796875,0.538330078125,0.67291259765625,-0.179443359375,0.0538330078125,-0.010986328125,0.001068115234375,  0.001068115234375,-0.010986328125,0.0538330078125,-0.179443359375,0.67291259765625,0.538330078125,-0.0897216796875,0.015380859375,-0.001373291015625,  -0.001373291015625,0.013427734375,-0.0604248046875,0.169189453125,-0.35247802734375,0.845947265625,0.4229736328125,-0.040283203125,0.003021240234375,  0.003021240234375,-0.028564453125,0.1221923828125,-0.314208984375,0.54986572265625,-0.733154296875,1.0997314453125002,0.314208984375,-0.013092041015625,  -0.013092041015625,0.120849609375,-0.4998779296875,1.221923828125,-1.96380615234375,2.199462890625,-1.8328857421875,1.571044921875,0.196380615234375,  0.196380615234375,-1.780517578125,7.1905517578125,-16.995849609375,25.96588134765625,-26.707763671875,18.695434570312496,-8.902587890625,3.338470458984375])
-
+        
         with nogil:
             block_size = order*nlgd
             for i_e in range(gw, nlge-gw):
@@ -236,10 +236,10 @@ cdef class VelocityEnoReconstructions:
                             left = left - direction
                             right = right + (1-direction)
                         lshift = i_d + offset - left
-                        offsetl = left - i_d - offset
-                        offsetr = right - i_d - offset
-                        DV.values[cc_shift + ijk] = dot(c[(lshift+1)*order : (lshift+2)*order], velocities[ (vel_shift + ijk + (offsetl+offset)*strides[0]) : (vel_shift + ijk + (offset+offsetr)*strides[0])+1 : strides[0]], order)
-
+                        offsetl = left - i_d
+                        offsetr = right - i_d
+                        DV.values[cc_shift + ijk] = dot(c[(lshift+1)*order : (lshift+2)*order], velocities[ (vel_shift + ijk + offsetl*strides[0]) : (vel_shift + ijk + offsetr*strides[0])+1 : strides[0]], order)
+                        
     @cython.boundscheck(False)           
     cdef void centralRec(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
                                     double [:] velocities, int vel_shift, int d, int cc_shift, int offset):
@@ -310,4 +310,4 @@ cdef class VelocityEnoReconstructions:
                                                                     velocities[ vel_shift + ijk + offsetstr ],
                                                                     velocities[ vel_shift + ijk + stride + offsetstr ],
                                                                     velocities[ vel_shift + ijk + 2*stride + offsetstr ] )
-        
+            
