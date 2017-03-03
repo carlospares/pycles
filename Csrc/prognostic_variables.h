@@ -269,7 +269,7 @@ void set_bcs(ssize_t dim, ssize_t s, double bc_factor ,struct DimStruct *dims,
                             }
                         }
                         else if(bc_factor == 0.5){ //symmetric at vertical cell interfaces
-				//values[ishift + jshift + bc_start] = values[ishift + jshift + bc_start + 1]; // already computed in VelocityEnoReconstructions
+                        	//values[ishift + jshift + bc_start] = values[ishift + jshift + bc_start + 1]; // already computed in VelocityEnoReconstructions
                             for(k=1;k<dims->gw;k++){
                                 values[ishift + jshift + bc_start - k] = values[ishift + jshift + bc_start + k  ];
                             }

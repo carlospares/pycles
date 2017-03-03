@@ -8,7 +8,7 @@ from os import listdir
 
 
 
-path = '/cluster/scratch/carlospa/post_cfl2/'
+path = '/cluster/scratch/carlospa/post_ilesfalse/'
 
 files =  listdir(path)
 
@@ -16,7 +16,7 @@ files = files[:]
 
 print files
 
-outfile = '/cluster/scratch/carlospa/pv_cfl2/to_paraview.nc'
+outfile = '/cluster/scratch/carlospa/pv_ilesfalse/to_paraview.nc'
 
 nfiles = len(files)
 
