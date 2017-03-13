@@ -53,13 +53,11 @@ cdef class VelocityEnoReconstructions:
         
         try:
             rec = namelist['interpolation']['type']
-            print "it's ok", rec
             if rec == "central":
                 self.recType = 1 # central
             else:
                 self.recType = 0 # ENO
         except:
-            print "exception triggered"
             self.recType = 0 # default to ENO if not specified
         
         if self.recType == 0:
