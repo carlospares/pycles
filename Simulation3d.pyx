@@ -165,10 +165,7 @@ class Simulation3d:
                 self.Micro.update(self.Gr, self.Ref, PV_, DV_, self.TS, self.Pa )
                 self.Tr.update(self.Gr, self.Ref, PV_, DV_, self.Pa)
                 
-                
-                self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
-                self.VelENO.enoCrossReconstructions(self.Gr, self.DV, self.Pa)
-                
+                self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)                
                 
                 self.SA.update(self.Gr,self.Ref,PV_, DV_, self.Pa, self.TS.dt)
                 self.MA.update(self.Gr,self.Ref,PV_, DV_, self.Pa)

@@ -48,84 +48,147 @@ cdef class VelocityEnoReconstructions:
         DV.add_variables('w@u','m/s','asym_half',Pa)
         DV.add_variables('w@v','m/s','asym_half',Pa)
         
-        # Important! ENO rec will not work if gw < order-2
+        # Important! ENO rec will not work if gw < order
         self.enoOrder = namelist['scalar_transport']['order']
-            
-        self.udd = np.zeros(self.enoOrder * Gr.dims.npg)
+        
+        try:
+            rec = namelist['interpolation']['type']
+            print "it's ok", rec
+            if rec == "central":
+                self.recType = 1 # central
+            else:
+                self.recType = 0 # ENO
+        except:
+            print "exception triggered"
+            self.recType = 0 # default to ENO if not specified
+        
+        if self.recType == 0:
+            self.udd = np.zeros(self.enoOrder * Gr.dims.npg)
         
         return
         
         
     cpdef update(self, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
                      DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
-        
-        self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
-        self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1)
-           
-        self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'v'), 1)
-        self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1)
-           
-        self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'w'), 2)
-        self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1)
-        
-#         self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1);
-#         self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1);
-#         self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1);
-        
+                     
+        if self.recType == 0: # ENO interpolations
+            # Cell center interpolations:
+            ##########################
+            print "doing eno"
+            self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
+            self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1)
+               
+            self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'v'), 1)
+            self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1)
+               
+            self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'w'), 2)
+            self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1)
+            
+            # Cross interpolations:
+            ##########################
+            ### interpolate u at v's location: u@v
+            self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 1)
+            self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 1, DV.get_varshift(Gr, 'u@v'), 0)
+            
+            ### interpolate u at w's location: u@w
+            self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 2)
+            self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 2, DV.get_varshift(Gr, 'u@w'), 0)
+            
+            ### interpolate v at u's location: v@u
+            self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'vcc'), 0)
+            self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 0, DV.get_varshift(Gr, 'v@u'), 0)
+            
+            ### interpolate v at w's location: v@w
+            self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'vcc'), 2)
+            self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 2, DV.get_varshift(Gr, 'v@w'), 0)
+            
+            ### interpolate w at u's location: w@u
+            self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'wcc'), 0)
+            self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 0, DV.get_varshift(Gr, 'w@u'), 0)
+            
+            ### interpolate u at w's location: w@v
+            self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'wcc'), 1)
+            self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'w@v'), 0)
+            
+        else: # central reconstructions
+            print "doing central"
+            # Cell center interpolations:
+            ##############################
+            self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1);
+            self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'v'), 1, DV.get_varshift(Gr, 'vcc'), -1);
+            self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'w'), 2, DV.get_varshift(Gr, 'wcc'), -1);
+            
+            # Cross interpolations
+            ##############################
+            self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 1, DV.get_varshift(Gr, 'u@v'), 0)
+            self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 2, DV.get_varshift(Gr, 'u@w'), 0)
+            self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 0, DV.get_varshift(Gr, 'v@u'), 0)
+            self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 2, DV.get_varshift(Gr, 'v@w'), 0)
+            self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 0, DV.get_varshift(Gr, 'w@u'), 0)
+            self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'w@v'), 0)
+            
+        # BCs
         DV.communicate_variable(Gr, Pa, DV.get_nv('ucc'))
         DV.communicate_variable(Gr, Pa, DV.get_nv('vcc'))
         DV.communicate_variable(Gr, Pa, DV.get_nv('wcc'))
         
+        DV.communicate_variable(Gr, Pa, DV.get_nv('u@v'))
+        DV.communicate_variable(Gr, Pa, DV.get_nv('u@w'))
+        DV.communicate_variable(Gr, Pa, DV.get_nv('v@u'))
+        DV.communicate_variable(Gr, Pa, DV.get_nv('v@w'))
+        DV.communicate_variable(Gr, Pa, DV.get_nv('w@u'))
+        DV.communicate_variable(Gr, Pa, DV.get_nv('w@v'))
+        
         return
         
 
-    cpdef enoCrossReconstructions(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
-        ### interpolate u at v's location: u@v
-        self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 1)
-        self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 1, DV.get_varshift(Gr, 'u@v'), 0)
-        
-        ### interpolate u at w's location: u@w
-        self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 2)
-        self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 2, DV.get_varshift(Gr, 'u@w'), 0)
-        
-        ### interpolate v at u's location: v@u
-        self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'vcc'), 0)
-        self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 0, DV.get_varshift(Gr, 'v@u'), 0)
-        
-        ### interpolate v at w's location: v@w
-        self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'vcc'), 2)
-        self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 2, DV.get_varshift(Gr, 'v@w'), 0)
-        
-        ### interpolate w at u's location: w@u
-        self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'wcc'), 0)
-        self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 0, DV.get_varshift(Gr, 'w@u'), 0)
-        
-        ### interpolate u at w's location: w@v
-        self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'wcc'), 1)
-        self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'w@v'), 0)
-        
-        DV.communicate_variable(Gr, Pa, DV.get_nv('u@v'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('u@w'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('v@u'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('v@w'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('w@u'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('w@v'))
-        
-                                    
-    cpdef centralCrossReconstructions(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
-        self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 1, DV.get_varshift(Gr, 'u@v'), 0)
-        self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 2, DV.get_varshift(Gr, 'u@w'), 0)
-        self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 0, DV.get_varshift(Gr, 'v@u'), 0)
-        self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 2, DV.get_varshift(Gr, 'v@w'), 0)
-        self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 0, DV.get_varshift(Gr, 'w@u'), 0)
-        self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'w@v'), 0)
-        
-        DV.communicate_variable(Gr, Pa, DV.get_nv('u@v'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('u@w'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('v@u'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('v@w'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('w@u'))
-        DV.communicate_variable(Gr, Pa, DV.get_nv('w@v'))
+#     cpdef enoCrossReconstructions(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
+#         ### interpolate u at v's location: u@v
+#         self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 1)
+#         self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 1, DV.get_varshift(Gr, 'u@v'), 0)
+#         
+#         ### interpolate u at w's location: u@w
+#         self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'ucc'), 2)
+#         self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 2, DV.get_varshift(Gr, 'u@w'), 0)
+#         
+#         ### interpolate v at u's location: v@u
+#         self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'vcc'), 0)
+#         self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 0, DV.get_varshift(Gr, 'v@u'), 0)
+#         
+#         ### interpolate v at w's location: v@w
+#         self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'vcc'), 2)
+#         self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 2, DV.get_varshift(Gr, 'v@w'), 0)
+#         
+#         ### interpolate w at u's location: w@u
+#         self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'wcc'), 0)
+#         self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 0, DV.get_varshift(Gr, 'w@u'), 0)
+#         
+#         ### interpolate u at w's location: w@v
+#         self.computeUndividedDifference(Gr, DV.values, DV.get_varshift(Gr, 'wcc'), 1)
+#         self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'w@v'), 0)
+#         
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('u@v'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('u@w'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('v@u'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('v@w'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('w@u'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('w@v'))
+#         
+#                                     
+#     cpdef centralCrossReconstructions(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa):
+#         self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 1, DV.get_varshift(Gr, 'u@v'), 0)
+#         self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'ucc'), 2, DV.get_varshift(Gr, 'u@w'), 0)
+#         self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 0, DV.get_varshift(Gr, 'v@u'), 0)
+#         self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'vcc'), 2, DV.get_varshift(Gr, 'v@w'), 0)
+#         self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 0, DV.get_varshift(Gr, 'w@u'), 0)
+#         self.centralRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'w@v'), 0)
+#         
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('u@v'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('u@w'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('v@u'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('v@w'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('w@u'))
+#         DV.communicate_variable(Gr, Pa, DV.get_nv('w@v'))
         
         
         

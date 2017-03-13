@@ -8,6 +8,7 @@ cdef class VelocityEnoReconstructions:
     cdef:
         double [:] udd
         int enoOrder;
+        int recType;
         
         
     cpdef update(self, Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV,
@@ -18,5 +19,5 @@ cdef class VelocityEnoReconstructions:
                                     double [:] velocities, int vel_shift, int d, int cc_shift, int offset)
     cdef void centralRec(self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV,
                                     double [:] velocities, int vel_shift, int d, int cc_shift, int offset)
-    cpdef enoCrossReconstructions(Self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa)
-    cpdef centralCrossReconstructions(Self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa)
+#     cpdef enoCrossReconstructions(Self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa)
+#     cpdef centralCrossReconstructions(Self, Grid.Grid Gr, DiagnosticVariables.DiagnosticVariables DV, ParallelMPI.ParallelMPI Pa)
