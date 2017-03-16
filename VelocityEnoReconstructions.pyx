@@ -72,7 +72,6 @@ cdef class VelocityEnoReconstructions:
         if self.recType == 0: # ENO interpolations
             # Cell center interpolations:
             ##########################
-            print "doing eno"
             self.computeUndividedDifference(Gr, PV.values, PV.get_varshift(Gr, 'u'), 0)
             self.enoRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1)
                
@@ -109,7 +108,6 @@ cdef class VelocityEnoReconstructions:
             self.enoRec(Gr, DV, DV.values, DV.get_varshift(Gr,'wcc'), 1, DV.get_varshift(Gr, 'w@v'), 0)
             
         else: # central reconstructions
-            print "doing central"
             # Cell center interpolations:
             ##############################
             self.centralRec(Gr, DV, PV.values, PV.get_varshift(Gr, 'u'), 0, DV.get_varshift(Gr, 'ucc'), -1);

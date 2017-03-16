@@ -182,12 +182,13 @@ class Simulation3d:
                 self.Budg.update(self.Gr,self.Ra, self.Sur, self.TS, self.Pa)
                 self.Tr.update_cleanup(self.Gr, self.Ref, PV_, DV_, self.Pa)
                 self.TS.update(self.Gr, self.PV, self.Pa)
+                
+#                 for i in xrange(PV_.get_varshift(self.Gr, "v"), PV_.get_varshift(self.Gr, "v") + GR_.dims.npg):
+#                     PV_.values[i] = 0.0
+                    
                 PV_.Update_all_bcs(self.Gr, self.Pa)
                 self.Pr.update(self.Gr, self.Ref, self.DV, self.PV, self.Pa)
                 self.TS.adjust_timestep(self.Gr, self.PV, self.DV,self.Pa)
-                
-#                 self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)
-#                 self.VelENO.enoCrossReconstructions(self.Gr, self.DV, self.Pa)
                 
                 self.io()
                 #PV_.debug(self.Gr,self.Ref,self.StatsIO,self.Pa)
