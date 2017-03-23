@@ -162,7 +162,7 @@ class Simulation3d:
             for self.TS.rk_step in xrange(self.TS.n_rk_steps):
                 self.Ke.update(self.Gr,PV_)
                 self.Th.update(self.Gr,self.Ref,PV_,DV_)
-                self.Micro.update(self.Gr, self.Ref, PV_, DV_, self.TS, self.Pa )
+                self.Micro.update_velocities(self.Gr, self.Ref, PV_, DV_, self.Pa )
                 self.Tr.update(self.Gr, self.Ref, PV_, DV_, self.Pa)
                 
                 self.VelENO.update(self.Gr, self.PV, self.DV, self.Pa)                
@@ -180,17 +180,18 @@ class Simulation3d:
                 self.Fo.update(self.Gr, self.Ref, self.PV, self.DV, self.Pa)
                 self.Ra.update(self.Gr, self.Ref, self.PV, self.DV, self.Sur, self.TS, self.Pa)
                 self.Budg.update(self.Gr,self.Ra, self.Sur, self.TS, self.Pa)
+                self.Micro.update_sources(self.Gr, self.Ref, PV_, DV_, self.TS, self.Pa )
                 self.Tr.update_cleanup(self.Gr, self.Ref, PV_, DV_, self.Pa)
                 self.TS.update(self.Gr, self.PV, self.Pa)
-                
-#                 for i in xrange(PV_.get_varshift(self.Gr, "v"), PV_.get_varshift(self.Gr, "v") + GR_.dims.npg):
-#                     PV_.values[i] = 0.0
                     
                 PV_.Update_all_bcs(self.Gr, self.Pa)
                 self.Pr.update(self.Gr, self.Ref, self.DV, self.PV, self.Pa)
                 self.TS.adjust_timestep(self.Gr, self.PV, self.DV,self.Pa)
                 
                 self.io()
+                
+#                 for i in xrange(PV_.get_varshift(self.Gr, "v"), PV_.get_varshift(self.Gr, "v") + GR_.dims.npg):
+#                     PV_.values[i] = 0.0
                 #PV_.debug(self.Gr,self.Ref,self.StatsIO,self.Pa)
             time2 = time.time()
             self.Pa.root_print('T = ' + str(self.TS.t) + ' dt = ' + str(self.TS.dt) +

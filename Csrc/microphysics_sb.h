@@ -319,6 +319,7 @@ void sb_microphysics_sources(const struct DimStruct *dims, struct LookupStruct *
     double nr_tendency_au, nr_tendency_scbk, nr_tendency_evp;
     double qr_tendency_au, qr_tendency_ac,  qr_tendency_evp;
     double sat_ratio;
+    double nr_tendency_tmp_all, qr_tendency_tmp_all, ql_tendency_tmp_all;
 
 
     const ssize_t istride = dims->nlg[1] * dims->nlg[2];
@@ -376,11 +377,16 @@ void sb_microphysics_sources(const struct DimStruct *dims, struct LookupStruct *
                     nr_tendency_tmp = nr_tendency_au + nr_tendency_scbk + nr_tendency_evp;
                     qr_tendency_tmp = qr_tendency_au + qr_tendency_ac + qr_tendency_evp;
                     ql_tendency_tmp = -qr_tendency_au - qr_tendency_ac;
+                    //New 3/16/17--also include transport tendencies
+                    nr_tendency_tmp_all = nr_tendency_tmp + nr_tendency[ijk];
+                    qr_tendency_tmp_all = qr_tendency_tmp + qr_tendency[ijk];
+                    ql_tendency_tmp_all = ql_tendency_tmp;
+
 
                     //Factor of 1.05 is ad-hoc
-                    rate = 1.05 * ql_tendency_tmp * dt_ /(- fmax(ql_tmp,SB_EPS));
-                    rate = fmax(1.05 * nr_tendency_tmp * dt_ /(-fmax(nr_tmp,SB_EPS)), rate);
-                    rate = fmax(1.05 * qr_tendency_tmp * dt_ /(-fmax(qr_tmp,SB_EPS)), rate);
+                    rate = 1.05 * ql_tendency_tmp_all * dt_ /(- fmax(ql_tmp,SB_EPS));
+                    rate = fmax(1.05 * nr_tendency_tmp_all * dt_ /(-fmax(nr_tmp,SB_EPS)), rate);
+                    rate = fmax(1.05 * qr_tendency_tmp_all * dt_ /(-fmax(qr_tmp,SB_EPS)), rate);
                     if(rate > 1.0 && iter_count < MAX_ITER){
                         //Limit the timestep, but don't allow it to become vanishingly small
                         //Don't adjust if we have reached the maximum iteration number
@@ -701,4 +707,3 @@ void sb_evaporation_rain_wrapper(const struct DimStruct *dims, struct LookupStru
     }
     return;
 }
-
