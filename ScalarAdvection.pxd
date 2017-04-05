@@ -15,6 +15,7 @@ cdef class ScalarAdvection:
         Py_ssize_t order_sedimentation
         unicode sa_type
         bint positivity
+        bint Mmpp #maximum/minimum preserving propertyf (only checked if positivity is true)
         double dt
         double (*L_fp)(double T, double Lambda) nogil
         double (*Lambda_fp)(double T) nogil

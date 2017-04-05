@@ -25,9 +25,6 @@ cdef extern from "scalar_advection.h":
     void compute_advective_fluxes_a(Grid.DimStruct *dims, double *rho0, double *rho0_half, double *velocity,
                                     double *scalar, double* flux, int d, int scheme) nogil
                                     
-    # void compute_advective_fluxes_hiweno(Grid.DimStruct *dims, double *rho0, double *rho0_half, double *velocity,
-                                         # double *scalar, double* flux, int d, int scheme) nogil
-                                    
     void compute_advective_fluxes_hiweno_nonconserv(Grid.DimStruct *dims, double *rho0, double *rho0_half,
                                         double *velocity, double *scalar, double* flux, int d, int scheme) nogil
                                         
@@ -41,6 +38,9 @@ cdef extern from "scalar_advection.h":
                                     
 cdef extern from "positivity_preservation.h":
     void positivity_preservation_xu(Grid.DimStruct *dims, double *ucc, double *vcc, double *wcc,
+                                    double *scalar, double *flux, double *tendencies, double dt) nogil
+                                    
+    void MmP_preservation_xu(Grid.DimStruct *dims, double *ucc, double *vcc, double *wcc,
                                     double *scalar, double *flux, double *tendencies, double dt) nogil
 
 
@@ -65,12 +65,20 @@ cdef class ScalarAdvection:
         try:
             self.sa_type = namelist['scalar_transport']['type']
         except:
+            print 'scalar_transport: type not given in namelist, using default PyCLES'
             self.sa_type = u'original'
             
         try:
             self.positivity = namelist['scalar_transport']['positivity']
         except:
+            print 'scalar_transport: positivity not given in namelist, defaulting to no positivity'
             self.positivity = False
+    
+        try:
+            self.Mmpp = namelist['scalar_transport']['Mmpp']
+        except:
+            'scalar_transport: Mmpp not given in namelist, defaulting to no maximum/minimum preservation'
+            self.Mmpp = False
         return
 
     cpdef initialize(self,Grid.Grid Gr, PrognosticVariables.PrognosticVariables PV, NetCDFIO_Stats NS, ParallelMPI.ParallelMPI Pa):
@@ -118,8 +126,14 @@ cdef class ScalarAdvection:
                         vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
                         compute_advective_fluxes_hiweno_nonconserv(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
                                                             &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                                                            
-                    positivity_preservation_xu(&Gr.dims, &DV.values[DV.get_varshift(Gr, 'ucc')],
+                    
+                    if self.Mmpp:
+                        MmP_preservation_xu(&Gr.dims, &DV.values[DV.get_varshift(Gr, 'ucc')],
+                                                &DV.values[DV.get_varshift(Gr, 'vcc')], &DV.values[DV.get_varshift(Gr, 'wcc')],
+                                                &PV.values[scalar_shift], &self.flux[scalar_count * (Gr.dims.dims * Gr.dims.npg)],
+                                                &PV.tendencies[scalar_shift], dt)
+                    else:
+                        positivity_preservation_xu(&Gr.dims, &DV.values[DV.get_varshift(Gr, 'ucc')],
                                                 &DV.values[DV.get_varshift(Gr, 'vcc')], &DV.values[DV.get_varshift(Gr, 'wcc')],
                                                 &PV.values[scalar_shift], &self.flux[scalar_count * (Gr.dims.dims * Gr.dims.npg)],
                                                 &PV.tendencies[scalar_shift], dt)
@@ -170,27 +184,6 @@ cdef class ScalarAdvection:
                                                        &self.flux[flux_shift], &PV.tendencies[scalar_shift],Gr.dims.dx[d],
                                                        d, isNonConservative)
                                                    
-                                                   
-                        # if self.sa_type == "hiweno_conserv" and self.order % 2 == 1:
-                            # vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
-                            # compute_advective_fluxes_hiweno(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
-                                                   # &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                            # scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
-                                                   # &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
-                                                   
-                        # elif self.sa_type == "hiweno_nonconserv" and self.order % 2 == 1:
-                            # vel_shift = DV.get_varshift(Gr, PV.velocity_names_directional[d] + 'cc')
-                            # compute_advective_fluxes_hiweno_nonconserv(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&DV.values[vel_shift],
-                                                   # &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                            # scalar_flux_divergence_nonconserv(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&DV.values[vel_shift],
-                                                    # &self.flux[flux_shift], &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
-                        
-                        # else:
-                            # vel_shift = PV.velocity_directions[d]*Gr.dims.npg
-                            # compute_advective_fluxes_a(&Gr.dims,&Rs.rho0[0],&Rs.rho0_half[0],&PV.values[vel_shift],
-                                                   # &PV.values[scalar_shift],&self.flux[flux_shift],d,self.order)
-                            # scalar_flux_divergence(&Gr.dims,&Rs.alpha0[0],&Rs.alpha0_half[0],&self.flux[flux_shift],
-                                                   # &PV.tendencies[scalar_shift],Gr.dims.dx[d],d)
 
 
                     scalar_count += 1
