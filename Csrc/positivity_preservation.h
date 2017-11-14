@@ -53,19 +53,27 @@ void positivity_preservation_xu(struct DimStruct *dims, double *ucc,
                 const ssize_t ijk = ishift + jshift + k;
                 
                 // upwind first order monotone fluxes for f(phi) = {u/v/w}_ctr * phi (u_ctr assumed constant for each cell)
-                uip = ucc[ijk] + ucc[ijk + ip1];
-                ui = ucc[ijk + im1] + ucc[ijk];
-                vjp = vcc[ijk] + vcc[ijk + jp1];
-                vj = vcc[ijk + jm1] + vcc[ijk];
-                wkp = wcc[ijk] + wcc[ijk + ip1];
-                wk = wcc[ijk + km1] + wcc[ijk];
+//                uip = ucc[ijk] + ucc[ijk + ip1];
+//                ui = ucc[ijk + im1] + ucc[ijk];
+//                vjp = vcc[ijk] + vcc[ijk + jp1];
+//                vj = vcc[ijk + jm1] + vcc[ijk];
+//                wkp = wcc[ijk] + wcc[ijk + ip1];
+//                wk = wcc[ijk + km1] + wcc[ijk];
                 
-                hip = ucc[ijk]* ((uip >= 0)*scalars[ijk] + (uip < 0)*scalars[ijk + ip1]);
-                hjp = vcc[ijk]* ((vjp >= 0)*scalars[ijk] + (vjp < 0)*scalars[ijk + jp1]);
-                hkp = wcc[ijk]* ((wkp >= 0)*scalars[ijk] + (wkp < 0)*scalars[ijk + kp1]);
-                him = ucc[ijk]* ((ui >= 0)*scalars[ijk + im1] + (ui < 0)*scalars[ijk]);
-                hjm = vcc[ijk]* ((vj >= 0)*scalars[ijk + jm1] + (vj < 0)*scalars[ijk]);
-                hkm = wcc[ijk]* ((wk >= 0)*scalars[ijk + km1] + (wk < 0)*scalars[ijk]);
+//                hip = ucc[ijk]* ((uip >= 0)*scalars[ijk] + (uip < 0)*scalars[ijk + ip1]);
+//                hjp = vcc[ijk]* ((vjp >= 0)*scalars[ijk] + (vjp < 0)*scalars[ijk + jp1]);
+//                hkp = wcc[ijk]* ((wkp >= 0)*scalars[ijk] + (wkp < 0)*scalars[ijk + kp1]);
+//                him = ucc[ijk]* ((ui >= 0)*scalars[ijk + im1] + (ui < 0)*scalars[ijk]);
+//                hjm = vcc[ijk]* ((vj >= 0)*scalars[ijk + jm1] + (vj < 0)*scalars[ijk]);
+//                hkm = wcc[ijk]* ((wk >= 0)*scalars[ijk + km1] + (wk < 0)*scalars[ijk]);
+
+                hip = ucc[ijk]* ((ucc[ijk] >= 0)*scalars[ijk] + (ucc[ijk] < 0)*scalars[ijk + ip1]);
+                hjp = vcc[ijk]* ((vcc[ijk] >= 0)*scalars[ijk] + (vcc[ijk] < 0)*scalars[ijk + jp1]);
+                hkp = wcc[ijk]* ((wcc[ijk] >= 0)*scalars[ijk] + (wcc[ijk] < 0)*scalars[ijk + kp1]);
+                him = ucc[ijk]* ((ucc[ijk] >= 0)*scalars[ijk + im1] + (ucc[ijk] < 0)*scalars[ijk]);
+                hjm = vcc[ijk]* ((vcc[ijk] >= 0)*scalars[ijk + jm1] + (vcc[ijk] < 0)*scalars[ijk]);
+                hkm = wcc[ijk]* ((wcc[ijk] >= 0)*scalars[ijk + km1] + (wcc[ijk] < 0)*scalars[ijk]);
+
                 
                 // high order fluxes for f(phi) = {u/v/w}_ctr * phi
                 Hip = ucc[ijk]* flux[x_shift + ijk];
@@ -100,7 +108,8 @@ void positivity_preservation_xu(struct DimStruct *dims, double *ucc,
                 Gkp = thetakp*(Hkp - hkp) + hkp;
                 Gkm = thetakm*(Hkm - hkm) + hkm;
                 
-                tendency[ijk] += fmax(-dxi*(Gip - Gim) - dyi*(Gjp - Gjm) - dzi*(Gkp - Gkm), -scalars[ijk]/dt);
+//                tendency[ijk] += fmax(-dxi*(Gip - Gim) - dyi*(Gjp - Gjm) - dzi*(Gkp - Gkm), -scalars[ijk]/dt);
+                tendency[ijk] += -dxi*(Gip - Gim) - dyi*(Gjp - Gjm) - dzi*(Gkp - Gkm);
                 
             } // End k loop
         } // End j loop
@@ -225,8 +234,8 @@ void MmP_preservation_xu(struct DimStruct *dims, double *ucc,
                 Gkp = thetakp*(Hkp - hkp) + hkp;
                 Gkm = thetakm*(Hkm - hkm) + hkm;
 
-//                tendency[ijk] += fmin((sM-scalars[ijk])/dt, fmax(-dxi*(Gip - Gim) - dyi*(Gjp - Gjm) - dzi*(Gkp - Gkm), (sm-scalars[ijk])/dt));
-                tendency[ijk] += -dxi*(Gip - Gim) - dyi*(Gjp - Gjm) - dzi*(Gkp - Gkm);
+                tendency[ijk] += fmin((sM-scalars[ijk])/dt, fmax(-dxi*(Gip - Gim) - dyi*(Gjp - Gjm) - dzi*(Gkp - Gkm), (sm-scalars[ijk])/dt));
+//                tendency[ijk] += -dxi*(Gip - Gim) - dyi*(Gjp - Gjm) - dzi*(Gkp - Gkm);
 
             } // End k loop
         } // End j loop
